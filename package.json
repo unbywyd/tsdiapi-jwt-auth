@@ -1,0 +1,52 @@
+{
+  "name": "tsdiapi-jwt-auth",
+  "description": "JWT authentication plugin for TSDIAPI-Server, providing easy-to-use guards, token generation, and session validation.",
+  "keywords": [
+    "tsdiapi",
+    "jwt",
+    "authentication",
+    "authorization",
+    "plugin"
+  ],
+  "version": "1.0.0",
+  "main": "output/index.js",
+  "types": "output/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "author": {
+    "name": "Artyom Gorlovetskiy",
+    "url": "https://github.com/unbywyd",
+    "email": "unbywyd@gmail.com"
+  },
+  "engines": {
+    "node": ">=18.19.0"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@types/express": "^5.0.0",
+    "jose": "^5.9.6"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.10",
+    "tsdiapi-server": "github:unbywyd/tsdiapi-server#master",
+    "typescript": "^5.7.2"
+  },
+  "peerDependencies": {
+    "reflect-metadata": "^0.1.13",
+    "typedi": "^0.10.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/unbywyd/tsdiapi-jwt-auth.git"
+  },
+  "bugs": {
+    "url": "https://github.com/unbywyd/tsdiapi-jwt-auth/issues"
+  },
+  "homepage": "https://github.com/unbywyd/tsdiapi-jwt-auth#readme",
+  "files": [
+    "output/",
+    "README.md",
+    "LICENSE"
+  ]
+}
