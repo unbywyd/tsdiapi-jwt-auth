@@ -9,9 +9,9 @@ Object.defineProperty(exports, "jwt", { enumerable: true, get: function () { ret
 Object.defineProperty(exports, "JWTGuard", { enumerable: true, get: function () { return jwt_auth_2.JWTGuard; } });
 Object.defineProperty(exports, "CurrentSession", { enumerable: true, get: function () { return jwt_auth_2.CurrentSession; } });
 Object.defineProperty(exports, "JWTTokenAuthCheckHandler", { enumerable: true, get: function () { return jwt_auth_2.JWTTokenAuthCheckHandler; } });
-const SignJWT = jwt_auth_1.jwt.signIn;
+const SignJWT = jwt_auth_1.jwt.signIn.bind(jwt_auth_1.jwt);
 exports.SignJWT = SignJWT;
-const VerifyJWT = jwt_auth_1.jwt.verify;
+const VerifyJWT = jwt_auth_1.jwt.verify.bind(jwt_auth_1.jwt);
 exports.VerifyJWT = VerifyJWT;
 const defaultConfig = {
     secretKey: 'secret',
