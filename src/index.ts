@@ -4,8 +4,8 @@ import { jwt, ValidateSessionFunction } from "./jwt-auth";
 
 export { jwt, JWTGuard, ValidateSessionFunction, CurrentSession, JWTTokenAuthCheckHandler } from "./jwt-auth";
 
-const SignJWT = jwt.signIn;
-const VerifyJWT = jwt.verify;
+const SignJWT = jwt.signIn.bind(jwt);
+const VerifyJWT = jwt.verify.bind(jwt);
 export { SignJWT, VerifyJWT };
 
 // jwt params
