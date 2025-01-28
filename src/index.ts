@@ -28,6 +28,22 @@ class App implements AppPlugin {
         const config = this.config;
         const appConfig = this.context.config.appConfig;
 
+        if (!this.context?.config?.swaggerOptions['securitySchemes']) {
+            this.context.config.swaggerOptions.securitySchemes = {
+                bearerAuth: {
+                    type: "http",
+                    scheme: "bearer",
+                    bearerFormat: "JWT",
+                }
+            }
+        } else {
+            this.context.config.swaggerOptions.securitySchemes.bearerAuth = {
+                type: "http",
+                scheme: "bearer",
+                bearerFormat: "JWT",
+            }
+        }
+
         const secretKey = appConfig.secretKey || appConfig['JWT_SECRET_KEY'] || config.secretKey || defaultConfig.secretKey;
         const expirationTime = appConfig.expirationTime || appConfig['JWT_EXPIRATION_TIME'] || config.expirationTime || defaultConfig.expirationTime;
 
