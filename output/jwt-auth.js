@@ -13,6 +13,7 @@ class jwtConfig {
     }
     signIn(payload) {
         const iat = Math.floor(Date.now() / 1000);
+        console.log('this.config.secretKey', this.config.secretKey);
         return new jose_1.SignJWT({ ...payload })
             .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
             .setExpirationTime(this.config.expirationTime)
@@ -22,6 +23,8 @@ class jwtConfig {
     }
     async verify(token) {
         try {
+            console.log('this.config.secretKey', this.config.secretKey);
+            console.log('token', token);
             const { payload } = await (0, jose_1.jwtVerify)(token, new TextEncoder().encode(this.config.secretKey));
             return payload;
         }
