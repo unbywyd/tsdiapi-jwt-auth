@@ -13,10 +13,10 @@ export class jwtConfig<TGuards extends Record<string, ValidateSessionFunction<an
 
     signIn<T extends Record<string, any>>(payload: T): Promise<string> {
         const iat = Math.floor(Date.now() / 1000);
-        console.log('this.config.secretKey', this.config.secretKey)
+        const exp = iat + this.config.expirationTime;
         return new SignJWT({ ...(payload as JWTPayload) })
             .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
-            .setExpirationTime(this.config.expirationTime)
+            .setExpirationTime(exp)
             .setIssuedAt(iat)
             .setNotBefore(iat)
             .sign(new TextEncoder().encode(this.config.secretKey));
@@ -25,7 +25,6 @@ export class jwtConfig<TGuards extends Record<string, ValidateSessionFunction<an
     async verify<T>(token: string): Promise<T> {
         try {
             const { payload } = await jwtVerify(token, new TextEncoder().encode(this.config.secretKey));
-            console.log('payload', payload)
             return payload as T;
         } catch (e) {
             console.error(e);
