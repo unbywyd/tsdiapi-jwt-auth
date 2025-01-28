@@ -24,11 +24,11 @@ export class jwtConfig<TGuards extends Record<string, ValidateSessionFunction<an
 
     async verify<T>(token: string): Promise<T> {
         try {
-            console.log('this.config.secretKey', this.config.secretKey)
-            console.log('token', token)
             const { payload } = await jwtVerify(token, new TextEncoder().encode(this.config.secretKey));
+            console.log('payload', payload)
             return payload as T;
         } catch (e) {
+            console.error(e);
             return null;
         }
     }

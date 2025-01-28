@@ -23,12 +23,12 @@ class jwtConfig {
     }
     async verify(token) {
         try {
-            console.log('this.config.secretKey', this.config.secretKey);
-            console.log('token', token);
             const { payload } = await (0, jose_1.jwtVerify)(token, new TextEncoder().encode(this.config.secretKey));
+            console.log('payload', payload);
             return payload;
         }
         catch (e) {
+            console.error(e);
             return null;
         }
     }
