@@ -1,10 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.jwt = void 0;
+exports.JWTTokenAuthCheckHandler = exports.CurrentSession = exports.JWTGuard = exports.jwt = void 0;
 exports.default = createPlugin;
 require("reflect-metadata");
 const jwt_auth_1 = require("./jwt-auth");
-Object.defineProperty(exports, "jwt", { enumerable: true, get: function () { return jwt_auth_1.jwt; } });
+var jwt_auth_2 = require("./jwt-auth");
+Object.defineProperty(exports, "jwt", { enumerable: true, get: function () { return jwt_auth_2.jwt; } });
+Object.defineProperty(exports, "JWTGuard", { enumerable: true, get: function () { return jwt_auth_2.JWTGuard; } });
+Object.defineProperty(exports, "CurrentSession", { enumerable: true, get: function () { return jwt_auth_2.CurrentSession; } });
+Object.defineProperty(exports, "JWTTokenAuthCheckHandler", { enumerable: true, get: function () { return jwt_auth_2.JWTTokenAuthCheckHandler; } });
 const defaultConfig = {
     secretKey: 'secret',
     expirationTime: 60 * 60 * 24 * 7 // 7 days
