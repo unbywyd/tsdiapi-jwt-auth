@@ -4,6 +4,10 @@ import { jwt, ValidateSessionFunction } from "./jwt-auth";
 
 export { jwt, JWTGuard, ValidateSessionFunction, CurrentSession, JWTTokenAuthCheckHandler } from "./jwt-auth";
 
+const SignJWT = jwt.signIn;
+const VerifyJWT = jwt.verify;
+export { SignJWT, VerifyJWT };
+
 // jwt params
 export type PluginOptions<TGuards extends Record<string, ValidateSessionFunction<any>> = {}> = {
     secretKey?: string;

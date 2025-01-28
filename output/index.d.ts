@@ -2,6 +2,9 @@ import "reflect-metadata";
 import { AppContext, AppPlugin } from "tsdiapi-server";
 import { ValidateSessionFunction } from "./jwt-auth";
 export { jwt, JWTGuard, ValidateSessionFunction, CurrentSession, JWTTokenAuthCheckHandler } from "./jwt-auth";
+declare const SignJWT: <T extends Record<string, any>>(payload: T) => Promise<string>;
+declare const VerifyJWT: <T>(token: string) => Promise<T>;
+export { SignJWT, VerifyJWT };
 export type PluginOptions<TGuards extends Record<string, ValidateSessionFunction<any>> = {}> = {
     secretKey?: string;
     expirationTime?: number;
