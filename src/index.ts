@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { AppContext, AppPlugin } from "tsdiapi-server";
+import { AppContext, AppPlugin } from "@tsdiapi/server";
 import { jwt, ValidateSessionFunction } from "./jwt-auth";
 
 export { jwt, JWTGuard, ValidateSessionFunction, CurrentSession, JWTTokenAuthCheckHandler } from "./jwt-auth";
@@ -16,7 +16,7 @@ export type PluginOptions<TGuards extends Record<string, ValidateSessionFunction
 };
 
 const defaultConfig: PluginOptions = {
-    secretKey: 'secret',
+    secretKey: 'secret-key-for-jwt',
     expirationTime: 60 * 60 * 24 * 7 // 7 days
 }
 
@@ -46,6 +46,10 @@ class App implements AppPlugin {
                 scheme: "bearer",
                 bearerFormat: "JWT",
             }
+        }
+        const secretKeyFromConfig = appConfig.secretKey || appConfig['JWT_SECRET_KEY'] || config.secretKey;
+        if (!secretKeyFromConfig) {
+            this.context.logger.error('JWT secret key is not provided. Please provide a secret key in the config file or as an environment variable.');
         }
 
         const secretKey = appConfig.secretKey || appConfig['JWT_SECRET_KEY'] || config.secretKey || defaultConfig.secretKey;

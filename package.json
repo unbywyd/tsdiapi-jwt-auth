@@ -1,6 +1,7 @@
 {
   "name": "tsdiapi-jwt-auth",
   "description": "JWT authentication plugin for TSDIAPI-Server, providing easy-to-use guards, token generation, and session validation.",
+  "version": "0.0.1-alpha.1",
   "keywords": [
     "tsdiapi",
     "jwt",
@@ -8,9 +9,12 @@
     "authorization",
     "plugin"
   ],
-  "version": "1.0.0",
   "main": "output/index.js",
   "types": "output/index.d.ts",
+  "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc"
   },
@@ -24,17 +28,20 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@types/express": "^5.0.0",
     "jose": "^5.9.6"
   },
   "devDependencies": {
+    "@types/express": "^5.0.0",
     "@types/node": "^22.10.10",
-    "tsdiapi-server": "github:unbywyd/tsdiapi-server#master",
+    "@tsdiapi/server": "^0.0.1-alpha",
     "typescript": "^5.7.2"
   },
   "peerDependencies": {
+    "express": "^4.21.2",
     "reflect-metadata": "^0.1.13",
-    "typedi": "^0.10.0"
+    "typedi": "^0.10.0",
+    "routing-controllers": "^0.10.4",
+    "routing-controllers-openapi": "^4.0.0"
   },
   "repository": {
     "type": "git",

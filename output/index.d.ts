@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { AppContext, AppPlugin } from "tsdiapi-server";
+import { AppContext, AppPlugin } from "@tsdiapi/server";
 import { ValidateSessionFunction } from "./jwt-auth";
 export { jwt, JWTGuard, ValidateSessionFunction, CurrentSession, JWTTokenAuthCheckHandler } from "./jwt-auth";
 declare const SignJWT: any;
