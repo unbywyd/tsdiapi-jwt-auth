@@ -23,6 +23,12 @@
 npm install @tsdiapi/jwt-auth
 ```
 
+Or use the CLI to add the plugin:
+
+```bash
+tsdiapi add plugin jwt-auth
+```
+
 ---
 
 ## Usage
@@ -32,13 +38,13 @@ npm install @tsdiapi/jwt-auth
 Import and register the plugin in your TSDIAPI application:
 
 ```typescript
-import createPlugin from '@tsdiapi/jwt-auth';
-import { createApp } from '@tsdiapi/server';
+import createPlugin from "@tsdiapi/jwt-auth";
+import { createApp } from "@tsdiapi/server";
 
 createApp({
   plugins: [
     createPlugin({
-      secretKey: 'your-secret-key', // Use JWT_SECRET_KEY in .env as an alternative
+      secretKey: "your-secret-key", // Use JWT_SECRET_KEY in .env as an alternative
       expirationTime: 60 * 60 * 24 * 7, // Token valid for 7 days, override with JWT_EXPIRATION_TIME in .env
     }),
   ],
@@ -63,22 +69,22 @@ JWT_EXPIRATION_TIME=604800
 Secure API endpoints using `@JWTGuard`. You can also add custom session validation logic:
 
 ```typescript
-import { JWTGuard } from '@tsdiapi/jwt-auth';
-import { Controller, Get } from 'routing-controllers';
+import { JWTGuard } from "@tsdiapi/jwt-auth";
+import { Controller, Get } from "routing-controllers";
 
-@Controller('/profile')
+@Controller("/profile")
 export class ProfileController {
-  @Get('/')
+  @Get("/")
   @JWTGuard({
     validateSession: async (session) => {
       if (!session.userId) {
-        return 'User not authenticated!';
+        return "User not authenticated!";
       }
       return true;
     },
   })
   getProfile() {
-    return { message: 'This is a protected route!' };
+    return { message: "This is a protected route!" };
   }
 }
 ```
@@ -90,12 +96,12 @@ export class ProfileController {
 Use the `@CurrentSession` decorator to retrieve the authenticated session inside your controller methods:
 
 ```typescript
-import { CurrentSession } from '@tsdiapi/jwt-auth';
-import { Controller, Get } from 'routing-controllers';
+import { CurrentSession } from "@tsdiapi/jwt-auth";
+import { Controller, Get } from "routing-controllers";
 
-@Controller('/session')
+@Controller("/session")
 export class SessionController {
-  @Get('/')
+  @Get("/")
   getSession(@CurrentSession() session: any) {
     return { session };
   }
@@ -110,11 +116,11 @@ You can register custom guards during plugin initialization. These guards can la
 
 ```typescript
 createPlugin({
-  secretKey: 'your-secret-key',
+  secretKey: "your-secret-key",
   guards: {
     adminOnly: async (session) => {
-      if (session.role !== 'admin') {
-        return 'Only administrators are allowed!';
+      if (session.role !== "admin") {
+        return "Only administrators are allowed!";
       }
       return true;
     },
@@ -125,15 +131,15 @@ createPlugin({
 To use the custom guard:
 
 ```typescript
-import { JWTGuard } from '@tsdiapi/jwt-auth';
-import { Controller, Get } from 'routing-controllers';
+import { JWTGuard } from "@tsdiapi/jwt-auth";
+import { Controller, Get } from "routing-controllers";
 
-@Controller('/admin')
+@Controller("/admin")
 export class AdminController {
-  @Get('/dashboard')
-  @JWTGuard({ validateSession: 'adminOnly' })
+  @Get("/dashboard")
+  @JWTGuard({ validateSession: "adminOnly" })
   getDashboard() {
-    return { message: 'Welcome to the admin dashboard!' };
+    return { message: "Welcome to the admin dashboard!" };
   }
 }
 ```
@@ -144,11 +150,11 @@ export class AdminController {
 
 ### Plugin Options
 
-| Option            | Type                                      | Description                                  |
-|-------------------|-------------------------------------------|----------------------------------------------|
-| `secretKey`       | `string`                                  | Secret key for signing JWT tokens.            |
-| `expirationTime`  | `number`                                  | Token expiration time in seconds.             |
-| `guards`          | `Record<string, ValidateSessionFunction>` | Custom guards for validating sessions.        |
+| Option           | Type                                      | Description                            |
+| ---------------- | ----------------------------------------- | -------------------------------------- |
+| `secretKey`      | `string`                                  | Secret key for signing JWT tokens.     |
+| `expirationTime` | `number`                                  | Token expiration time in seconds.      |
+| `guards`         | `Record<string, ValidateSessionFunction>` | Custom guards for validating sessions. |
 
 ---
 
