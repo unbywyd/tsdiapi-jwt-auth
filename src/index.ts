@@ -47,7 +47,7 @@ class App implements AppPlugin {
                 bearerFormat: "JWT",
             }
         }
-        const secretKeyFromConfig = appConfig.secretKey || appConfig['JWT_SECRET_KEY'] || config.secretKey;
+        const secretKeyFromConfig = (appConfig.secretKey || appConfig['JWT_SECRET_KEY'] || config.secretKey);
         if (!secretKeyFromConfig) {
             this.context.logger.error('JWT secret key is not provided. Please provide a secret key in the config file or as an environment variable.');
         }

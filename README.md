@@ -26,7 +26,7 @@ npm install @tsdiapi/jwt-auth
 Or use the CLI to add the plugin:
 
 ```bash
-tsdiapi add plugin jwt-auth
+tsdiapi plugins add jwt-auth
 ```
 
 ---

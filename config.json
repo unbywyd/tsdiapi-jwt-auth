@@ -1,0 +1,39 @@
+{
+    "name": "@tsdiapi/jwt-auth",
+    "description": "JWT Authentication Plugin",
+    "variables": [
+        {
+            "key": "JWT_SECRET_KEY",
+            "type": "string",
+            "default": "",
+            "configurable": true,
+            "description": "The secret key used for signing JWT tokens",
+            "inquirer": {
+                "type": "input",
+                "message": "Enter your JWT secret key:"
+            },
+            "validate": {
+                "type": "string",
+                "minLength": 10,
+                "errorMessage": "JWT secret key must be at least 10 characters long."
+            }
+        },
+        {
+            "key": "JWT_EXPIRATION_TIME",
+            "type": "number",
+            "default": 2592000,
+            "configurable": true,
+            "description": "JWT expiration time in seconds (default 30 days)",
+            "inquirer": {
+                "type": "number",
+                "message": "Enter your JWT expiration time in minutes:"
+            },
+            "validate": {
+                "type": "integer",
+                "minimum": 1,
+                "errorMessage": "Expiration time must be a positive number."
+            },
+            "transform": "x * 60"
+        }
+    ]
+}
