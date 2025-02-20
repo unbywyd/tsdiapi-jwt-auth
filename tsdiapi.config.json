@@ -21,9 +21,9 @@
         {
             "key": "JWT_EXPIRATION_TIME",
             "type": "number",
-            "default": 2592000,
+            "default": 43200,
             "configurable": true,
-            "description": "JWT expiration time in seconds (default 30 days)",
+            "description": "JWT expiration time in minutes (default: 30 days)",
             "inquirer": {
                 "type": "number",
                 "message": "Enter your JWT expiration time in minutes:"
