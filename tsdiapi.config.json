@@ -3,7 +3,7 @@
     "description": "JWT Authentication Plugin",
     "variables": [
         {
-            "key": "JWT_SECRET_KEY",
+            "name": "JWT_SECRET_KEY",
             "type": "string",
             "default": "",
             "configurable": true,
@@ -19,7 +19,7 @@
             }
         },
         {
-            "key": "JWT_EXPIRATION_TIME",
+            "name": "JWT_EXPIRATION_TIME",
             "type": "number",
             "default": 43200,
             "configurable": true,
