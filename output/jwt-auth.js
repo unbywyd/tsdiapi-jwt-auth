@@ -1,12 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.JWTTokenAuthCheckHandler = exports.jwt = exports.jwtConfig = void 0;
+exports.JWTTokenAuthCheckHandler = exports.provider = exports.JWTAuthProvider = void 0;
 exports.JWTGuard = JWTGuard;
 exports.CurrentSession = CurrentSession;
 const routing_controllers_openapi_1 = require("routing-controllers-openapi");
 const jose_1 = require("jose");
 const routing_controllers_1 = require("routing-controllers");
-class jwtConfig {
+class JWTAuthProvider {
     config;
     init(config) {
         this.config = config;
@@ -35,12 +35,12 @@ class jwtConfig {
         return this.config?.guards?.[name];
     }
 }
-exports.jwtConfig = jwtConfig;
-const jwt = new jwtConfig();
-exports.jwt = jwt;
+exports.JWTAuthProvider = JWTAuthProvider;
+const provider = new JWTAuthProvider();
+exports.provider = provider;
 const JWTTokenAuthCheckHandler = async (token) => {
     try {
-        const session = await jwt.verify(token);
+        const session = await provider.verify(token);
         if (!session) {
             return new Error('Token is invalid!');
         }
@@ -60,14 +60,14 @@ function JWTGuard(options) {
             }
             const token = authHeader.split(/\s+/)[1];
             try {
-                const session = await jwt.verify(token);
+                const session = await provider.verify(token);
                 if (!session) {
                     return response.status(403).send({ status: 403, message: 'Invalid token!' });
                 }
                 let validateSession = options?.validateSession;
                 // Если указано имя гуарда, ищем его в конфигурации
                 if (options?.guardName) {
-                    validateSession = jwt.getGuard(options.guardName?.toString());
+                    validateSession = provider.getGuard(options.guardName?.toString());
                     if (!validateSession) {
                         return response
                             .status(403)

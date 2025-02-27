@@ -1,18 +1,24 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.VerifyJWT = exports.SignJWT = exports.JWTTokenAuthCheckHandler = exports.CurrentSession = exports.JWTGuard = exports.jwt = void 0;
 exports.default = createPlugin;
+exports.getJWTAuthProvider = getJWTAuthProvider;
 require("reflect-metadata");
 const jwt_auth_1 = require("./jwt-auth");
-var jwt_auth_2 = require("./jwt-auth");
-Object.defineProperty(exports, "jwt", { enumerable: true, get: function () { return jwt_auth_2.jwt; } });
-Object.defineProperty(exports, "JWTGuard", { enumerable: true, get: function () { return jwt_auth_2.JWTGuard; } });
-Object.defineProperty(exports, "CurrentSession", { enumerable: true, get: function () { return jwt_auth_2.CurrentSession; } });
-Object.defineProperty(exports, "JWTTokenAuthCheckHandler", { enumerable: true, get: function () { return jwt_auth_2.JWTTokenAuthCheckHandler; } });
-const SignJWT = jwt_auth_1.jwt.signIn.bind(jwt_auth_1.jwt);
-exports.SignJWT = SignJWT;
-const VerifyJWT = jwt_auth_1.jwt.verify.bind(jwt_auth_1.jwt);
-exports.VerifyJWT = VerifyJWT;
+__exportStar(require("./jwt-auth"), exports);
 const defaultConfig = {
     secretKey: 'secret-key-for-jwt',
     expirationTime: 60 * 60 * 24 * 7 // 7 days
@@ -52,10 +58,16 @@ class App {
         const expirationTime = appConfig.expirationTime || appConfig['JWT_EXPIRATION_TIME'] || config.expirationTime || defaultConfig.expirationTime;
         this.config.secretKey = secretKey;
         this.config.expirationTime = expirationTime;
-        jwt_auth_1.jwt.init(this.config);
+        jwt_auth_1.provider.init(this.config);
     }
 }
 function createPlugin(config) {
     return new App(config);
+}
+function getJWTAuthProvider() {
+    if (!jwt_auth_1.provider.config) {
+        throw new Error('JWTAuthProvider is not initialized. Please initialize the provider first.');
+    }
+    return jwt_auth_1.provider;
 }
 //# sourceMappingURL=index.js.map

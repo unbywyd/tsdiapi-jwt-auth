@@ -1,10 +1,7 @@
 import "reflect-metadata";
 import { AppContext, AppPlugin } from "@tsdiapi/server";
 import { ValidateSessionFunction } from "./jwt-auth";
-export { jwt, JWTGuard, ValidateSessionFunction, CurrentSession, JWTTokenAuthCheckHandler } from "./jwt-auth";
-declare const SignJWT: any;
-declare const VerifyJWT: any;
-export { SignJWT, VerifyJWT };
+export * from "./jwt-auth";
 export type PluginOptions<TGuards extends Record<string, ValidateSessionFunction<any>> = {}> = {
     secretKey?: string;
     expirationTime?: number;
@@ -18,4 +15,5 @@ declare class App implements AppPlugin {
     onInit(ctx: AppContext): Promise<void>;
 }
 export default function createPlugin(config?: PluginOptions): App;
+export declare function getJWTAuthProvider(): import("./jwt-auth").JWTAuthProvider<Record<string, ValidateSessionFunction<any>>>;
 //# sourceMappingURL=index.d.ts.map
