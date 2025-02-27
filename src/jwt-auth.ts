@@ -4,7 +4,23 @@ import { createParamDecorator, UseBefore } from 'routing-controllers';
 import type { Request, Response, NextFunction } from 'express';
 import { PluginOptions } from '.';
 
-export class jwtConfig<TGuards extends Record<string, ValidateSessionFunction<any>>> {
+export type ValidateSessionFunction<T> = (session: T) => Promise<boolean | string> | (boolean | string);
+
+export type JWTGuardOptions<TGuards extends Record<string, ValidateSessionFunction<any>>> = {
+    guardName?: keyof TGuards; // Имя зарегистрированного гуарда
+    validateSession?: ValidateSessionFunction<Record<string, any>>; // Ручной валидатор
+    errorMessage?: string;
+    guardDescription?: string;
+};
+export interface AuthProvider<TGuards extends Record<string, ValidateSessionFunction<any>>> {
+    init(config: PluginOptions<TGuards>): void;
+    signIn<T extends Record<string, any>>(payload: T): Promise<string>;
+    verify<T>(token: string): Promise<T | null>;
+    getGuard(name: keyof TGuards): ValidateSessionFunction<any> | undefined;
+}
+
+export class JWTAuthProvider<TGuards extends Record<string, ValidateSessionFunction<any>>>
+    implements AuthProvider<TGuards> {
     config: PluginOptions<TGuards> | null;
 
     init(config: PluginOptions<TGuards>) {
@@ -37,14 +53,14 @@ export class jwtConfig<TGuards extends Record<string, ValidateSessionFunction<an
     }
 }
 
-const jwt = new jwtConfig();
-export { jwt }
+const provider = new JWTAuthProvider();
+export { provider }
 
 export const JWTTokenAuthCheckHandler = async (
     token: string
 ) => {
     try {
-        const session = await jwt.verify(token)
+        const session = await provider.verify(token)
         if (!session) {
             return new Error('Token is invalid!')
         }
@@ -53,15 +69,6 @@ export const JWTTokenAuthCheckHandler = async (
         return new Error('Token is invalid!')
     }
 }
-
-export type ValidateSessionFunction<T> = (session: T) => Promise<boolean | string> | (boolean | string);
-
-export type JWTGuardOptions<TGuards extends Record<string, ValidateSessionFunction<any>>> = {
-    guardName?: keyof TGuards; // Имя зарегистрированного гуарда
-    validateSession?: ValidateSessionFunction<Record<string, any>>; // Ручной валидатор
-    errorMessage?: string;
-    guardDescription?: string;
-};
 
 export function JWTGuard<TGuards extends Record<string, ValidateSessionFunction<any>>>(
     options?: JWTGuardOptions<TGuards>
@@ -77,7 +84,7 @@ export function JWTGuard<TGuards extends Record<string, ValidateSessionFunction<
             const token = authHeader.split(/\s+/)[1];
 
             try {
-                const session = await jwt.verify(token);
+                const session = await provider.verify(token);
                 if (!session) {
                     return response.status(403).send({ status: 403, message: 'Invalid token!' });
                 }
@@ -86,7 +93,7 @@ export function JWTGuard<TGuards extends Record<string, ValidateSessionFunction<
 
                 // Если указано имя гуарда, ищем его в конфигурации
                 if (options?.guardName) {
-                    validateSession = jwt.getGuard(options.guardName?.toString());
+                    validateSession = provider.getGuard(options.guardName?.toString());
                     if (!validateSession) {
                         return response
                             .status(403)
@@ -122,7 +129,6 @@ export function JWTGuard<TGuards extends Record<string, ValidateSessionFunction<
         })(target, propertyKey, descriptor);
     };
 }
-
 
 export function CurrentSession() {
     return createParamDecorator({

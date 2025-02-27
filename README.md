@@ -88,7 +88,6 @@ export class ProfileController {
   }
 }
 ```
-
 ---
 
 ### Accessing the Current Session
@@ -141,6 +140,55 @@ export class AdminController {
   getDashboard() {
     return { message: "Welcome to the admin dashboard!" };
   }
+}
+```
+
+---
+
+## Using the JWT Auth Provider
+
+The `JWTAuthProvider` is the core service for handling JWT-based authentication in your TSDIAPI application. It provides methods for signing in users, verifying tokens, and managing guards for session validation.
+
+### Importing the Provider
+
+To access the provider, import the `getJWTAuthProvider` function:
+
+```typescript
+import { getJWTAuthProvider } from "@tsdiapi/jwt-auth";
+```
+
+Make sure the plugin is registered before calling this function, otherwise, an error will be thrown.
+
+---
+
+### `signIn(payload: Record<string, any>): Promise<string>`
+
+Generates a JWT token for the given user payload.
+
+#### Example:
+```typescript
+const authProvider = getJWTAuthProvider();
+
+const token = await authProvider.signIn({
+  userId: "123",
+  role: "admin",
+});
+console.log("Generated Token:", token);
+```
+
+### `verify<T>(token: string): Promise<T | null>`
+
+Verifies a JWT token and returns the decoded session payload.
+
+#### Example:
+```typescript
+const authProvider = getJWTAuthProvider();
+
+const session = await authProvider.verify<{ userId: string; role: string }>(token);
+if (session) {
+  console.log("Authenticated User:", session.userId);
+} else {
+  console.log("Invalid token");
 }
 ```
 

@@ -1,12 +1,7 @@
 import "reflect-metadata";
 import { AppContext, AppPlugin } from "@tsdiapi/server";
-import { jwt, ValidateSessionFunction } from "./jwt-auth";
-
-export { jwt, JWTGuard, ValidateSessionFunction, CurrentSession, JWTTokenAuthCheckHandler } from "./jwt-auth";
-
-const SignJWT = jwt.signIn.bind(jwt);
-const VerifyJWT = jwt.verify.bind(jwt);
-export { SignJWT, VerifyJWT };
+import { provider, ValidateSessionFunction } from "./jwt-auth";
+export * from "./jwt-auth";
 
 // jwt params
 export type PluginOptions<TGuards extends Record<string, ValidateSessionFunction<any>> = {}> = {
@@ -57,11 +52,18 @@ class App implements AppPlugin {
 
         this.config.secretKey = secretKey;
         this.config.expirationTime = expirationTime;
-        jwt.init(this.config);
+        provider.init(this.config);
     }
 
 }
 
 export default function createPlugin(config?: PluginOptions) {
     return new App(config);
+}
+
+export function getJWTAuthProvider() {
+    if (!provider.config) {
+        throw new Error('JWTAuthProvider is not initialized. Please initialize the provider first.');
+    }
+    return provider;
 }
