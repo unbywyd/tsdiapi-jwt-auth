@@ -55,14 +55,14 @@
                 {
                     "path": "prisma/schema.prisma",
                     "mode": "append",
-                    "match": "^\\s*model\\s+User\\s*{",
+                    "match": "(m|M)odel\\s+User\\s*{",
                     "expected": false,
                     "content": "model User {\n  id          String  @id @default(cuid())\n  email       String? @unique\n  phoneNumber String? @unique\n\n  isDeleted   Boolean   @default(false)\n  createdAt   DateTime  @default(now())\n  updatedAt   DateTime  @updatedAt\n  deletedAt   DateTime?\n}\n"
                 },
                 {
                     "path": "prisma/schema.prisma",
                     "mode": "append",
-                    "match": "^\\s*model\\s+Session\\s*{",
+                    "match": "(m|M)odel\\s+Session\\s*{",
                     "expected": false,
                     "content": "model Session {\n  id          String    @id @default(cuid())\n  email       String?\n  phoneNumber String?\n  code        String\n  createdAt   DateTime  @default(now())\n  updatedAt   DateTime  @updatedAt\n  deletedAt   DateTime?\n  isDeleted   Boolean   @default(false)\n}\n"
                 }
