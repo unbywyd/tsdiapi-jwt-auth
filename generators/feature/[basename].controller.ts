@@ -5,7 +5,7 @@ import {
 } from "routing-controllers";
 import { Service } from "typedi";
 import { OpenAPI } from "routing-controllers-openapi";
-import { SuccessResponse, Summary } from 'routing-controllers-openapi-extra';
+import { SuccessResponse, Summary } from '@tsdiapi/server';
 import {{className}}Service, { InputVerifyDTO, OutputSignInEmailDTO, OutputSignInPhoneDTO, OutputVerifyDTO, SignInEmailDTO, SignInPhoneDTO } from "./{{kebabcase}}.service";
 
 

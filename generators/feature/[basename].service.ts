@@ -6,7 +6,8 @@ import { Service } from "typedi";
 import { User } from "@prisma/client";
 import { IsEmail, IsString } from "class-validator";
 import { Expose } from "class-transformer";
-import { APIResponse, IsEntity, responseError, toDTO } from "routing-controllers-openapi-extra";
+import { APIResponse, responseError, toDTO } from "@tsdiapi/server";
+import { IsEntity } from "prisma-class-dto-generator";
 import { getInforuProvider } from '@tsdiapi/inforu';
 import { App } from '@tsdiapi/server';
 
