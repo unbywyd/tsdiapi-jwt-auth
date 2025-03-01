@@ -6,8 +6,7 @@ import { Service } from "typedi";
 import { User } from "@prisma/client";
 import { IsEmail, IsString } from "class-validator";
 import { Expose } from "class-transformer";
-import { APIResponse, responseError, toDTO } from "@tsdiapi/server";
-import { IsEntity } from "prisma-class-dto-generator";
+import { APIResponse, responseError, toDTO, IsEntity } from "@tsdiapi/server";
 import { getInforuProvider } from '@tsdiapi/inforu';
 import { App } from '@tsdiapi/server';
 
