@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.JWTTokenAuthCheckHandler = exports.provider = exports.JWTAuthProvider = void 0;
 exports.JWTGuard = JWTGuard;
+exports.isJWTValid = isJWTValid;
 exports.CurrentSession = CurrentSession;
 const routing_controllers_openapi_1 = require("routing-controllers-openapi");
 const jose_1 = require("jose");
@@ -99,6 +100,22 @@ function JWTGuard(options) {
             return operation;
         })(target, propertyKey, descriptor);
     };
+}
+async function isJWTValid(req) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader)
+        return false;
+    const token = authHeader.split(/\s+/)[1];
+    try {
+        const session = await provider.verify(token);
+        if (!session)
+            return false;
+        return session;
+    }
+    catch (error) {
+        console.error('JWT validation error:', error);
+        return false;
+    }
 }
 function CurrentSession() {
     return (0, routing_controllers_1.createParamDecorator)({

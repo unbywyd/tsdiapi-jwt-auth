@@ -130,6 +130,21 @@ export function JWTGuard<TGuards extends Record<string, ValidateSessionFunction<
     };
 }
 
+export async function isJWTValid<T>(req: Request): Promise<false | T> {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return false;
+
+    const token = authHeader.split(/\s+/)[1];
+    try {
+        const session = await provider.verify(token);
+        if (!session) return false;
+        return session as T;
+    } catch (error) {
+        console.error('JWT validation error:', error);
+        return false;
+    }
+}
+
 export function CurrentSession() {
     return createParamDecorator({
         value: (action) => {

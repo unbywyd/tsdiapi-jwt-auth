@@ -1,3 +1,4 @@
+import type { Request } from 'express';
 import { PluginOptions } from '.';
 export type ValidateSessionFunction<T> = (session: T) => Promise<boolean | string> | (boolean | string);
 export type JWTGuardOptions<TGuards extends Record<string, ValidateSessionFunction<any>>> = {
@@ -23,5 +24,6 @@ declare const provider: JWTAuthProvider<Record<string, ValidateSessionFunction<a
 export { provider };
 export declare const JWTTokenAuthCheckHandler: (token: string) => Promise<unknown>;
 export declare function JWTGuard<TGuards extends Record<string, ValidateSessionFunction<any>>>(options?: JWTGuardOptions<TGuards>): (target: any, propertyKey?: string, descriptor?: PropertyDescriptor) => void;
+export declare function isJWTValid<T>(req: Request): Promise<false | T>;
 export declare function CurrentSession(): (object: Object, method: string, index: number) => void;
 //# sourceMappingURL=jwt-auth.d.ts.map
