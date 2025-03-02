@@ -48,9 +48,6 @@
                     "isHandlebarsTemplate": true
                 }
             ],
-            "postMessages": [
-                "✅ Feature {{name}} created successfully!"
-            ],
             "fileModifications": [
                 {
                     "path": "prisma/schema.prisma",
@@ -67,14 +64,22 @@
                     "content": "model Session {\n  id          String    @id @default(cuid())\n  email       String?\n  phoneNumber String?\n  code        String\n  createdAt   DateTime  @default(now())\n  updatedAt   DateTime  @updatedAt\n  deletedAt   DateTime?\n  isDeleted   Boolean   @default(false)\n}\n"
                 }
             ],
-            "afterGenerate": "npx prisma generate",
+            "afterGenerate": {
+                "command": "npx prisma generate"
+            },
             "requiredPackages": [
                 "@prisma/client",
                 "prisma"
             ],
             "requiredPaths": [
                 "prisma/schema.prisma"
+            ],
+            "postMessages": [
+                "✅ Feature {{name}} created successfully!"
             ]
         }
+    ],
+    "postMessages": [
+        "🚀 JWT Authentication Plugin installed successfully!"
     ]
 }
