@@ -3,7 +3,7 @@ import { getEmailProvider } from '@tsdiapi/email';
 import { getJWTAuthProvider } from '@tsdiapi/jwt-auth';
 
 import { Service } from "typedi";
-import { User } from "@prisma/client";
+import { {{pascalCase userModelName}} } from "@prisma/client";
 import { IsEmail, IsString } from "class-validator";
 import { Expose } from "class-transformer";
 import { APIResponse, responseError, toDTO, IsEntity } from "@tsdiapi/server";
@@ -29,7 +29,7 @@ export class OutputSignInEmailDTO {
 
     @Expose()
     @IsString()
-    sessionId: string;
+    {{lowerCase sessionModelName}}Id: string;
 }
 
 export class OutputSignInPhoneDTO {
@@ -39,7 +39,7 @@ export class OutputSignInPhoneDTO {
 
     @Expose()
     @IsString()
-    sessionId: string;
+    {{lowerCase sessionModelName}}Id: string;
 }
 
 export class InputVerifyDTO {
@@ -49,10 +49,10 @@ export class InputVerifyDTO {
 
     @IsString()
     @Expose()
-    sessionId: string;
+    {{lowerCase sessionModelName}}Id: string;
 }
 
-export class OutputUserDTO {
+export class Output{{pascalCase userModelName}}DTO {
     @Expose()
     @IsString()
     id: string;
@@ -72,12 +72,12 @@ export class OutputVerifyDTO {
     accessToken: string;
 
     @Expose()
-    @IsEntity(() => OutputUserDTO)
-    user: OutputUserDTO;
+    @IsEntity(() => Output{{pascalCase userModelName}}DTO)
+    {{lowerCase userModelName}}: Output{{pascalCase userModelName}}DTO;
 }
 
-export type UserSession = Partial<User> & {
-    id: User['id'];
+export type {{pascalCase userModelName}}Session = Partial<{{pascalCase userModelName}}> & {
+    id: {{pascalCase userModelName}}['id'];
 }
 
 function generateRandomSixDigits(): number {
@@ -90,40 +90,40 @@ function generateRandomSixDigits(): number {
 export default class {{className}}Service {
     async verify(data: InputVerifyDTO): Promise<APIResponse<OutputVerifyDTO>> {
         try {
-            const session = await client.session.findUnique({
+            const {{lowerCase sessionModelName}} = await client.{{lowerCase sessionModelName}}.findUnique({
                 where: {
-                    id: data.sessionId
+                    id: data.{{lowerCase sessionModelName}}Id
                 }
             });
             const isDev = App.isDevelopment;
 
             if (!isDev) {
-                if (!session) {
-                    return responseError("Invalid session");
+                if (!{{lowerCase sessionModelName}}) {
+                    return responseError("Invalid {{lowerCase sessionModelName}}");
                 }
 
-                if (session?.code !== data.code) {
+                if ({{lowerCase sessionModelName}}?.code !== data.code) {
                     return responseError("Invalid code");
                 }
 
-                if (session.isDeleted) {
+                if ({{lowerCase sessionModelName}}.deletedAt) {
                     return responseError("Session expired");
                 }
             }
 
-            if (session) {
-                await client.session.update({
+            if ({{lowerCase sessionModelName}}) {
+                await client.{{lowerCase sessionModelName}}.update({
                     where: {
-                        id: session.id
+                        id: {{lowerCase sessionModelName}}.id
                     },
                     data: {
-                        isDeleted: true
+                        deletedAt: new Date()
                     }
                 });
             }
-            const { email, phoneNumber } = session;
+            const { email, phoneNumber } = {{lowerCase sessionModelName}};
 
-            let user = await client.user.findFirst({
+            let {{lowerCase userModelName}} = await client.{{lowerCase userModelName}}.findFirst({
                 where: {
                     ...(email ? {
                         email: {
@@ -138,8 +138,8 @@ export default class {{className}}Service {
                 }
             });
 
-            if (!user) {
-                user = await client.user.create({
+            if (!{{lowerCase userModelName}}) {
+                {{lowerCase userModelName}} = await client.{{lowerCase userModelName}}.create({
                     data: {
                         email: email,
                         phoneNumber: phoneNumber
@@ -148,15 +148,15 @@ export default class {{className}}Service {
             }
             const authProvider = getJWTAuthProvider();
 
-            const accessToken = await authProvider.signIn<UserSession>({
-                id: user.id,
-                email: user.email,
-                phoneNumber: user.phoneNumber
+            const accessToken = await authProvider.signIn<{{pascalCase userModelName}}Session>({
+                id: {{lowerCase userModelName}}.id,
+                email: {{lowerCase userModelName}}.email,
+                phoneNumber: {{lowerCase userModelName}}.phoneNumber
             });
 
             return {
                 accessToken: accessToken,
-                user
+                {{lowerCase userModelName}}
             }
 
         } catch (e) {
@@ -170,7 +170,7 @@ export default class {{className}}Service {
             const phoneNumber = data.phoneNumber;
             const code = generateRandomSixDigits();
 
-            const session = await client.session.create({
+            const {{lowerCase sessionModelName}} = await client.{{lowerCase sessionModelName}}.create({
                 data: {
                     code: code.toString(),
                     phoneNumber: phoneNumber,
@@ -184,7 +184,7 @@ export default class {{className}}Service {
             });
 
             return toDTO<OutputSignInEmailDTO>(OutputSignInEmailDTO, {
-                sessionId: session.id,
+                {{lowerCase sessionModelName}}Id: {{lowerCase sessionModelName}}.id,
                 phoneNumber: phoneNumber
             });
 
@@ -200,7 +200,7 @@ export default class {{className}}Service {
             const email = data.email;
             const code = generateRandomSixDigits();
 
-            const session = await client.session.create({
+            const {{lowerCase sessionModelName}} = await client.{{lowerCase sessionModelName}}.create({
                 data: {
                     code: code.toString(),
                     email: email,
@@ -214,7 +214,7 @@ export default class {{className}}Service {
             });
 
             return toDTO<OutputSignInEmailDTO>(OutputSignInEmailDTO, {
-                sessionId: session.id,
+                {{lowerCase sessionModelName}}Id: {{lowerCase sessionModelName}}.id,
                 email: email
             });
 

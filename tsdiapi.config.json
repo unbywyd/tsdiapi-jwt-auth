@@ -48,31 +48,35 @@
                     "isHandlebarsTemplate": true
                 }
             ],
-            "fileModifications": [
+            "args": [
                 {
-                    "path": "prisma/schema.prisma",
-                    "mode": "append",
-                    "match": "(m|M)odel\\s+User\\s*{",
-                    "expected": false,
-                    "content": "model User {\n  id          String  @id @default(cuid())\n  email       String? @unique\n  phoneNumber String? @unique\n\n  isDeleted   Boolean   @default(false)\n  createdAt   DateTime  @default(now())\n  updatedAt   DateTime  @updatedAt\n  deletedAt   DateTime?\n}\n"
+                    "name": "userModelName",
+                    "description": "Prisma model name for users",
+                    "inquirer": {
+                        "type": "input",
+                        "message": "Enter the Prisma model name for users:",
+                        "default": "User"
+                    }
                 },
                 {
-                    "path": "prisma/schema.prisma",
-                    "mode": "append",
-                    "match": "(m|M)odel\\s+Session\\s*{",
-                    "expected": false,
-                    "content": "model Session {\n  id          String    @id @default(cuid())\n  email       String?\n  phoneNumber String?\n  code        String\n  createdAt   DateTime  @default(now())\n  updatedAt   DateTime  @updatedAt\n  deletedAt   DateTime?\n  isDeleted   Boolean   @default(false)\n}\n"
+                    "name": "sessionModelName",
+                    "description": "Prisma model name for sessions",
+                    "inquirer": {
+                        "type": "input",
+                        "message": "Enter the Prisma model name for sessions:",
+                        "default": "Session"
+                    }
                 }
             ],
-            "afterGenerate": {
-                "command": "npx prisma generate"
-            },
-            "requiredPackages": [
-                "@prisma/client",
-                "prisma"
-            ],
-            "requiredPaths": [
-                "prisma/schema.prisma"
+            "prismaScripts": [
+                {
+                    "command": "ADD MODEL {{pascalCase userModelName}} ({id String  @id @default(cuid()) | email String? @unique | phoneNumber String? @unique });",
+                    "description": "Add User model to Prisma schema"
+                },
+                {
+                    "command": "ADD MODEL {{pascalCase sessionModelName}} ({id String  @id @default(cuid()) | email String? | phoneNumber String? | code String });",
+                    "description": "Add Session model to Prisma schema"
+                }
             ],
             "postMessages": [
                 "✅ Feature {{name}} created successfully!"
