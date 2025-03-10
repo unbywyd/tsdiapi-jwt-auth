@@ -1,24 +1,6 @@
-"use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __exportStar = (this && this.__exportStar) || function(m, exports) {
-    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.default = createPlugin;
-exports.getJWTAuthProvider = getJWTAuthProvider;
-require("reflect-metadata");
-const jwt_auth_1 = require("./jwt-auth");
-__exportStar(require("./jwt-auth"), exports);
+import "reflect-metadata";
+import { provider } from "./jwt-auth.js";
+export * from "./jwt-auth.js";
 const defaultConfig = {
     secretKey: 'secret-key-for-jwt',
     expirationTime: 60 * 60 * 24 * 7 // 7 days
@@ -58,16 +40,16 @@ class App {
         const expirationTime = appConfig.expirationTime || appConfig['JWT_EXPIRATION_TIME'] || config.expirationTime || defaultConfig.expirationTime;
         this.config.secretKey = secretKey;
         this.config.expirationTime = expirationTime;
-        jwt_auth_1.provider.init(this.config);
+        provider.init(this.config);
     }
 }
-function createPlugin(config) {
+export default function createPlugin(config) {
     return new App(config);
 }
-function getJWTAuthProvider() {
-    if (!jwt_auth_1.provider.config) {
+export function getJWTAuthProvider() {
+    if (!provider.config) {
         throw new Error('JWTAuthProvider is not initialized. Please initialize the provider first.');
     }
-    return jwt_auth_1.provider;
+    return provider;
 }
 //# sourceMappingURL=index.js.map

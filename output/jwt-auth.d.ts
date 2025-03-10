@@ -1,5 +1,5 @@
 import type { Request } from 'express';
-import { PluginOptions } from '.';
+import { PluginOptions } from './index.js';
 export type ValidateSessionFunction<T> = (session: T) => Promise<boolean | string> | (boolean | string);
 export type JWTGuardOptions<TGuards extends Record<string, ValidateSessionFunction<any>>> = {
     guardName?: keyof TGuards;

@@ -1,13 +1,7 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.JWTTokenAuthCheckHandler = exports.provider = exports.JWTAuthProvider = void 0;
-exports.JWTGuard = JWTGuard;
-exports.isJWTValid = isJWTValid;
-exports.CurrentSession = CurrentSession;
-const routing_controllers_openapi_1 = require("routing-controllers-openapi");
-const jose_1 = require("jose");
-const routing_controllers_1 = require("routing-controllers");
-class JWTAuthProvider {
+import { OpenAPI } from 'routing-controllers-openapi';
+import { jwtVerify, SignJWT } from 'jose';
+import { createParamDecorator, UseBefore } from 'routing-controllers';
+export class JWTAuthProvider {
     config;
     init(config) {
         this.config = config;
@@ -15,7 +9,7 @@ class JWTAuthProvider {
     signIn(payload) {
         const iat = Math.floor(Date.now() / 1000);
         const exp = iat + this.config.expirationTime;
-        return new jose_1.SignJWT({ ...payload })
+        return new SignJWT({ ...payload })
             .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
             .setExpirationTime(exp)
             .setIssuedAt(iat)
@@ -24,7 +18,7 @@ class JWTAuthProvider {
     }
     async verify(token) {
         try {
-            const { payload } = await (0, jose_1.jwtVerify)(token, new TextEncoder().encode(this.config.secretKey));
+            const { payload } = await jwtVerify(token, new TextEncoder().encode(this.config.secretKey));
             return payload;
         }
         catch (e) {
@@ -36,10 +30,9 @@ class JWTAuthProvider {
         return this.config?.guards?.[name];
     }
 }
-exports.JWTAuthProvider = JWTAuthProvider;
 const provider = new JWTAuthProvider();
-exports.provider = provider;
-const JWTTokenAuthCheckHandler = async (token) => {
+export { provider };
+export const JWTTokenAuthCheckHandler = async (token) => {
     try {
         const session = await provider.verify(token);
         if (!session) {
@@ -51,10 +44,9 @@ const JWTTokenAuthCheckHandler = async (token) => {
         return new Error('Token is invalid!');
     }
 };
-exports.JWTTokenAuthCheckHandler = JWTTokenAuthCheckHandler;
-function JWTGuard(options) {
+export function JWTGuard(options) {
     return function (target, propertyKey, descriptor) {
-        (0, routing_controllers_1.UseBefore)(async (request, response, next) => {
+        UseBefore(async (request, response, next) => {
             const authHeader = request.headers.authorization;
             if (!authHeader) {
                 return response.status(403).send({ status: 403, message: 'Unauthorized!' });
@@ -90,7 +82,7 @@ function JWTGuard(options) {
                 return response.status(403).send({ status: 403, message: 'Unauthorized!' });
             }
         })(target, propertyKey, descriptor);
-        return (0, routing_controllers_openapi_1.OpenAPI)((operation) => {
+        return OpenAPI((operation) => {
             operation.security = [{ bearerAuth: [] }];
             if (options?.guardDescription) {
                 operation.description = operation?.description
@@ -101,7 +93,7 @@ function JWTGuard(options) {
         })(target, propertyKey, descriptor);
     };
 }
-async function isJWTValid(req) {
+export async function isJWTValid(req) {
     const authHeader = req.headers.authorization;
     if (!authHeader)
         return false;
@@ -117,8 +109,8 @@ async function isJWTValid(req) {
         return false;
     }
 }
-function CurrentSession() {
-    return (0, routing_controllers_1.createParamDecorator)({
+export function CurrentSession() {
+    return createParamDecorator({
         value: (action) => {
             return action.request?.session || null;
         },
