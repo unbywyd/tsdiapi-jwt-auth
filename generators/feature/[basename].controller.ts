@@ -6,7 +6,7 @@ import {
 import { Service } from "typedi";
 import { OpenAPI } from "routing-controllers-openapi";
 import { SuccessResponse, Summary } from '@tsdiapi/server';
-import {{className}}Service, { InputVerifyDTO, OutputSignInEmailDTO, OutputSignInPhoneDTO, OutputVerifyDTO, SignInEmailDTO, SignInPhoneDTO } from "./{{kebabCase name}}.service";
+import {{className}}Service, { InputVerifyDTO, OutputSignInEmailDTO, OutputSignInPhoneDTO, OutputVerifyDTO, SignInEmailDTO, SignInPhoneDTO } from "./{{kebabCase name}}.service.js";
 
 
 @Service()

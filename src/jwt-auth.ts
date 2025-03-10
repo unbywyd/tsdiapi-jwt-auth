@@ -2,7 +2,7 @@ import { OpenAPI } from 'routing-controllers-openapi';
 import { JWTPayload, jwtVerify, SignJWT } from 'jose'
 import { createParamDecorator, UseBefore } from 'routing-controllers';
 import type { Request, Response, NextFunction } from 'express';
-import { PluginOptions } from '.';
+import { PluginOptions } from './index.js';
 
 export type ValidateSessionFunction<T> = (session: T) => Promise<boolean | string> | (boolean | string);
 
