@@ -1,7 +1,7 @@
 {
   "name": "@tsdiapi/jwt-auth",
   "description": "JWT authentication plugin for TSDIAPI-Server, providing easy-to-use guards, token generation, and session validation.",
-  "version": "0.0.2-alpha.1",
+  "version": "0.1.0",
   "type": "module",
   "keywords": [
     "tsdiapi",
@@ -34,10 +34,10 @@
   "devDependencies": {
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.10",
-    "@tsdiapi/server": "^0.0.1-alpha",
     "typescript": "^5.7.2"
   },
   "peerDependencies": {
+    "@tsdiapi/server": "^0.1.0",
     "reflect-metadata": "^0.2.2",
     "typedi": "^0.10.0",
     "routing-controllers": "^0.11.0",
