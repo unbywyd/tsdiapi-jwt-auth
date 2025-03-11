@@ -1,12 +1,13 @@
 import {
     Body,
     JsonController,
-    Post
+    Post,
+    Get
 } from "routing-controllers";
 import { Service } from "typedi";
 import { OpenAPI } from "routing-controllers-openapi";
 import { SuccessResponse, Summary } from '@tsdiapi/server';
-import {{className}}Service, { InputVerifyDTO, OutputSignInEmailDTO, UserSession, InputSignUpAdminDTO, InputSignInAdminDTO, OutputAdminSessionDTO, OutputSignInPhoneDTO, OutputVerifyDTO, SignInEmailDTO, SignInPhoneDTO } from "./{{kebabCase name}}.service.js";
+import {{className}}Service, { InputVerifyDTO, OutputSignInEmailDTO, {{pascalCase userModelName}}Session, InputSignUpAdminDTO, InputSignInAdminDTO, OutputAdminSessionDTO, OutputSignInPhoneDTO, OutputVerifyDTO, SignInEmailDTO, SignInPhoneDTO } from "./{{kebabCase name}}.service.js";
 import { CurrentSession, JWTGuard } from "@tsdiapi/jwt-auth";
 import { client } from "@tsdiapi/prisma";
 
@@ -59,7 +60,7 @@ export class {{className}}Controller {
     @SuccessResponse(OutputAdminSessionDTO)
     @JWTGuard()
     async getAdmin(
-        @CurrentSession() session: UserSession
+        @CurrentSession() session: {{pascalCase userModelName}}Session
     ) {
         return {
             admin: await client.admin.findUnique({

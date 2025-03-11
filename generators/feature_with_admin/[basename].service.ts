@@ -4,20 +4,16 @@ import { getJWTAuthProvider, isJWTValid } from '@tsdiapi/jwt-auth';
 import { CryptoService } from '@tsdiapi/crypto';
 import { Service } from "typedi";
 import { {{pascalCase userModelName}} } from "@prisma/client";
-import { IsEmail, IsString } from "class-validator";
+import { IsDefined, IsEmail, IsString, MinLength } from "class-validator";
 import { Expose } from "class-transformer";
 import { APIResponse, responseError, toDTO, IsEntity } from "@tsdiapi/server";
 import { getInforuProvider } from '@tsdiapi/inforu';
 import { App } from '@tsdiapi/server';
 import { OutputAdminDTO } from '@base/prisma-models/models/OutputAdminDTO.model.js';
 import { Output{{pascalCase userModelName}}DTO } from '@base/prisma-models/models/Output{{pascalCase userModelName}}DTO.model.js';
-export type UserSession = Partial<{{pascalCase userModelName}}> & {
-    id: {{pascalCase userModelName}}['id'];
-    adminId?: {{pascalCase userModelName}}['adminId'];
-}
 
 export const AdminGuard = async (req: any) => {
-    const session = await isJWTValid<UserSession>(req);
+    const session = await isJWTValid<{{pascalCase userModelName}}Session>(req);
     if (!session) {
         return false;
     }
@@ -126,6 +122,7 @@ export class OutputVerifyDTO {
 
 export type {{pascalCase userModelName}}Session = Partial<{{pascalCase userModelName}}> & {
     id: {{pascalCase userModelName}}['id'];
+    adminId?: {{pascalCase userModelName}}['adminId'];
 }
 
 function generateRandomSixDigits(): number {
@@ -158,7 +155,7 @@ export default class {{className}}Service {
 
             const authProvider = getJWTAuthProvider();
 
-            const accessToken = await authProvider.signIn<UserSession>({
+            const accessToken = await authProvider.signIn<{{pascalCase userModelName}}Session>({
                 id: null,
                 phoneNumber: admin.phoneNumber,
                 adminId: admin.id
@@ -198,7 +195,7 @@ export default class {{className}}Service {
                 }
             });
 
-            const accessToken = await getJWTAuthProvider().signIn<UserSession>({
+            const accessToken = await getJWTAuthProvider().signIn<{{pascalCase userModelName}}Session>({
                 id: null,
                 phoneNumber: newAdmin.phoneNumber,
                 adminId: newAdmin.id
