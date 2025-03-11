@@ -1,7 +1,7 @@
 import { client } from '@tsdiapi/prisma';
 import { getEmailProvider } from '@tsdiapi/email';
-import { getJWTAuthProvider } from '@tsdiapi/jwt-auth';
-
+import { getJWTAuthProvider, isJWTValid } from '@tsdiapi/jwt-auth';
+import { CryptoService } from '@tsdiapi/crypto';
 import { Service } from "typedi";
 import { {{pascalCase userModelName}} } from "@prisma/client";
 import { IsEmail, IsString } from "class-validator";
@@ -9,6 +9,66 @@ import { Expose } from "class-transformer";
 import { APIResponse, responseError, toDTO, IsEntity } from "@tsdiapi/server";
 import { getInforuProvider } from '@tsdiapi/inforu';
 import { App } from '@tsdiapi/server';
+import { OutputAdminDTO } from '@base/prisma-models/models/OutputAdminDTO.model.js';
+import { Output{{pascalCase userModelName}}DTO } from '@base/prisma-models/models/Output{{pascalCase userModelName}}DTO.model.js';
+export type UserSession = Partial<{{pascalCase userModelName}}> & {
+    id: {{pascalCase userModelName}}['id'];
+    adminId?: {{pascalCase userModelName}}['adminId'];
+}
+
+export const AdminGuard = async (req: any) => {
+    const session = await isJWTValid<UserSession>(req);
+    if (!session) {
+        return false;
+    }
+    return !!session.adminId;
+}
+
+export class InputSignUpAdminDTO {
+    @IsString()
+    @Expose()
+    phoneNumber: string;
+
+    @IsString()
+    @Expose()
+    name: string;
+
+    @IsString()
+    @Expose()
+    secret: string;
+
+    @IsString()
+    @Expose()
+    email: string;
+
+    @IsString()
+    @Expose()
+    @IsDefined()
+    @MinLength(6)
+    password: string;
+}
+
+export class InputSignInAdminDTO {
+    @IsString()
+    @Expose()
+    phoneNumber: string;
+
+    @IsString()
+    @Expose()
+    @IsDefined()
+    @MinLength(6)
+    password: string;
+}
+
+export class OutputAdminSessionDTO {
+    @Expose()
+    @IsString()
+    accessToken: string;
+
+    @Expose()
+    @IsEntity(() => OutputAdminDTO)
+    admin: OutputAdminDTO;
+}
 
 export class SignInEmailDTO {
     @IsString()
@@ -16,6 +76,7 @@ export class SignInEmailDTO {
     @IsEmail()
     email: string;
 }
+
 export class OutputSignInEmailDTO {
     @Expose()
     @IsString()
@@ -53,20 +114,6 @@ export class InputVerifyDTO {
     {{lowerCase sessionModelName}}Id: string;
 }
 
-export class Output{{pascalCase userModelName}}DTO {
-    @Expose()
-    @IsString()
-    id: string;
-
-    @Expose()
-    @IsString()
-    email: string;
-
-    @Expose()
-    @IsString()
-    phoneNumber: string;
-}
-
 export class OutputVerifyDTO {
     @Expose()
     @IsString()
@@ -89,6 +136,83 @@ function generateRandomSixDigits(): number {
 
 @Service()
 export default class {{className}}Service {
+    constructor(
+        public cryptoService: CryptoService
+    ) { }
+    async signInByAdmin(data: InputSignInAdminDTO) {
+        try {
+            const admin = await client.admin.findUnique({
+                where: {
+                    phoneNumber: data.phoneNumber
+                }
+            });
+            if (!admin) {
+                return responseError("User not found");
+            }
+
+            const passwordIsvalid = this.cryptoService.verifyPassword(data.password, admin?.password || '');
+            if (!passwordIsvalid) {
+                return responseError("Invalid password");
+            }
+
+
+            const authProvider = getJWTAuthProvider();
+
+            const accessToken = await authProvider.signIn<UserSession>({
+                id: null,
+                phoneNumber: admin.phoneNumber,
+                adminId: admin.id
+            });
+
+            return {
+                accessToken,
+                admin
+            }
+
+        } catch (e) {
+            console.error(e);
+            return responseError(e.message);
+        }
+    }
+    async signUpAdmin(data: InputSignUpAdminDTO) {
+        try {
+            const secret = await App.env('JWT_ADMIN_SECRET');
+            if (data.secret !== secret) {
+                return responseError("Invalid secret");
+            }
+            const admin = await client.admin.findUnique({
+                where: {
+                    phoneNumber: data.phoneNumber
+                }
+            });
+            if (admin) {
+                return responseError("User already exists");
+            }
+            const password = await this.cryptoService.hashPassword(data.password);
+            const newAdmin = await client.admin.create({
+                data: {
+                    email: data.email || null,
+                    name: data.name || null,
+                    password: password,
+                    phoneNumber: data.phoneNumber
+                }
+            });
+
+            const accessToken = await getJWTAuthProvider().signIn<UserSession>({
+                id: null,
+                phoneNumber: newAdmin.phoneNumber,
+                adminId: newAdmin.id
+            });
+            return {
+                accessToken,
+                admin: newAdmin
+            }
+        } catch (e) {
+            console.error(e);
+            return responseError(e.message);
+        }
+    }
+
     async verify(data: InputVerifyDTO): Promise<APIResponse<OutputVerifyDTO>> {
         try {
             const {{lowerCase sessionModelName}} = await client.{{lowerCase sessionModelName}}.findUnique({
