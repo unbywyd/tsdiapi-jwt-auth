@@ -1,227 +1,158 @@
 import { client } from '@tsdiapi/prisma';
-import { getEmailProvider } from '@tsdiapi/email';
+import { useEmailProvider } from '@tsdiapi/email';
 import { getJWTAuthProvider } from '@tsdiapi/jwt-auth';
 
 import { Service } from "typedi";
-import { {{pascalCase userModelName}} } from "@prisma/client";
-import { IsEmail, IsString } from "class-validator";
-import { Expose } from "class-transformer";
-import { APIResponse, responseError, toDTO, IsEntity } from "@tsdiapi/server";
-import { getInforuProvider } from '@tsdiapi/inforu';
 import { App } from '@tsdiapi/server';
+import { Type, Static } from '@sinclair/typebox';
+import { APIResponse, responseError } from '@tsdiapi/server';
+import { useInforuProvider } from '@tsdiapi/inforu';
 
-export class SignInEmailDTO {
-    @IsString()
-    @Expose()
-    @IsEmail()
-    email: string;
-}
-export class OutputSignInEmailDTO {
-    @Expose()
-    @IsString()
-    email: string;
+// === DTOs ===
+export const SignInEmailDTO = Type.Object({
+  email: Type.String({ format: 'email' })
+});
+export type SignInEmailDTOType = Static<typeof SignInEmailDTO>;
 
-    @Expose()
-    @IsString()
-    {{lowerCase sessionModelName}}Id: string;
-}
+export const OutputSignInEmailDTO = Type.Object({
+  email: Type.String(),
+  {{lowerCase sessionModelName}}Id: Type.String(),
+});
+export type OutputSignInEmailDTOType = Static<typeof OutputSignInEmailDTO>;
 
-export class SignInPhoneDTO {
-    @IsString()
-    @Expose()
-    phoneNumber: string;
-}
+export const SignInPhoneDTO = Type.Object({
+  phoneNumber: Type.String(),
+});
+export type SignInPhoneDTOType = Static<typeof SignInPhoneDTO>;
 
+export const OutputSignInPhoneDTO = Type.Object({
+  phoneNumber: Type.String(),
+  {{lowerCase sessionModelName}}Id: Type.String(),
+});
+export type OutputSignInPhoneDTOType = Static<typeof OutputSignInPhoneDTO>;
 
-export class OutputSignInPhoneDTO {
-    @Expose()
-    @IsString()
-    phoneNumber: string;
+export const InputVerifyDTO = Type.Object({
+  code: Type.String(),
+  {{lowerCase sessionModelName}}Id: Type.String(),
+});
+export type InputVerifyDTOType = Static<typeof InputVerifyDTO>;
 
-    @Expose()
-    @IsString()
-    {{lowerCase sessionModelName}}Id: string;
-}
+export const Output{{pascalCase userModelName}}DTO = Type.Object({
+  id: Type.String(),
+  email: Type.String(),
+  phoneNumber: Type.String(),
+});
+export type Output{{pascalCase userModelName}}DTOType = Static<typeof Output{{pascalCase userModelName}}DTO>;
 
-export class InputVerifyDTO {
-    @IsString()
-    @Expose()
-    code: string;
+export const OutputVerifyDTO = Type.Object({
+  accessToken: Type.String(),
+  {{lowerCase userModelName}}: Output{{pascalCase userModelName}}DTO,
+});
+export type OutputVerifyDTOType = Static<typeof OutputVerifyDTO>;
 
-    @IsString()
-    @Expose()
-    {{lowerCase sessionModelName}}Id: string;
-}
-
-export class Output{{pascalCase userModelName}}DTO {
-    @Expose()
-    @IsString()
-    id: string;
-
-    @Expose()
-    @IsString()
-    email: string;
-
-    @Expose()
-    @IsString()
-    phoneNumber: string;
-}
-
-export class OutputVerifyDTO {
-    @Expose()
-    @IsString()
-    accessToken: string;
-
-    @Expose()
-    @IsEntity(() => Output{{pascalCase userModelName}}DTO)
-    {{lowerCase userModelName}}: Output{{pascalCase userModelName}}DTO;
-}
-
-export type {{pascalCase userModelName}}Session = Partial<{{pascalCase userModelName}}> & {
-    id: {{pascalCase userModelName}}['id'];
-}
+export type {{pascalCase userModelName}}Session = {
+  id: string;
+  email: string;
+  phoneNumber: string;
+};
 
 function generateRandomSixDigits(): number {
-    const min = 100000;
-    const max = 999999;
-    return Math.floor(Math.random() * (max - min + 1)) + min;
+  return Math.floor(100000 + Math.random() * 900000);
 }
 
 @Service()
 export default class {{className}}Service {
-    async verify(data: InputVerifyDTO): Promise<APIResponse<OutputVerifyDTO>> {
-        try {
-            const {{lowerCase sessionModelName}} = await client.{{lowerCase sessionModelName}}.findUnique({
-                where: {
-                    id: data.{{lowerCase sessionModelName}}Id
-                }
-            });
-            const isDev = App.isDevelopment;
+  async verify(data: InputVerifyDTOType): Promise<APIResponse<OutputVerifyDTOType>> {
+    try {
+      const session = await client.{{lowerCase sessionModelName}}.findUnique({
+        where: { id: data.{{lowerCase sessionModelName}}Id }
+      });
 
-            if (!isDev) {
-                if (!{{lowerCase sessionModelName}}) {
-                    return responseError("Invalid {{lowerCase sessionModelName}}");
-                }
+      const isDev = App.isDevelopment;
 
-                if ({{lowerCase sessionModelName}}?.code !== data.code) {
-                    return responseError("Invalid code");
-                }
+      if (!isDev) {
+        if (!session) return responseError("Invalid session");
+        if (session.code !== data.code) return responseError("Invalid code");
+        if (session.deletedAt) return responseError("Session expired");
+      }
 
-                if ({{lowerCase sessionModelName}}.deletedAt) {
-                    return responseError("Session expired");
-                }
-            }
+      if (session) {
+        await client.{{lowerCase sessionModelName}}.update({
+          where: { id: session.id },
+          data: { deletedAt: new Date() },
+        });
+      }
 
-            if ({{lowerCase sessionModelName}}) {
-                await client.{{lowerCase sessionModelName}}.update({
-                    where: {
-                        id: {{lowerCase sessionModelName}}.id
-                    },
-                    data: {
-                        deletedAt: new Date()
-                    }
-                });
-            }
-            const { email, phoneNumber } = {{lowerCase sessionModelName}};
+      const { email, phoneNumber } = session;
+      let user = await client.{{lowerCase userModelName}}.findFirst({
+        where: email ? { email } : { phoneNumber }
+      });
 
-            let {{lowerCase userModelName}} = await client.{{lowerCase userModelName}}.findFirst({
-                where: {
-                    ...(email ? {
-                        email: {
-                            equals: email
-                        }
-                    } : {
-                        phoneNumber:
-                        {
-                            equals: phoneNumber
-                        }
-                    })
-                }
-            });
+      if (!user) {
+        user = await client.{{lowerCase userModelName}}.create({
+          data: { email, phoneNumber }
+        });
+      }
 
-            if (!{{lowerCase userModelName}}) {
-                {{lowerCase userModelName}} = await client.{{lowerCase userModelName}}.create({
-                    data: {
-                        email: email,
-                        phoneNumber: phoneNumber
-                    }
-                });
-            }
-            const authProvider = getJWTAuthProvider();
+      const authProvider = getJWTAuthProvider();
+      const accessToken = await authProvider.signIn<{{pascalCase userModelName}}Session>({
+        id: user.id,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+      });
 
-            const accessToken = await authProvider.signIn<{{pascalCase userModelName}}Session>({
-                id: {{lowerCase userModelName}}.id,
-                email: {{lowerCase userModelName}}.email,
-                phoneNumber: {{lowerCase userModelName}}.phoneNumber
-            });
+      return {
+        accessToken,
+        {{lowerCase userModelName}}: user
+      };
 
-            return {
-                accessToken: accessToken,
-                {{lowerCase userModelName}}
-            }
-
-        } catch (e) {
-            console.error(e);
-            return responseError(e.message);
-        }
+    } catch (e) {
+      console.error(e);
+      return responseError(e.message);
     }
-    async signInByPhone(data: SignInPhoneDTO) {
-        try {
-            const provider = getInforuProvider();
-            const phoneNumber = data.phoneNumber;
-            const code = generateRandomSixDigits();
+  }
 
-            const {{lowerCase sessionModelName}} = await client.{{lowerCase sessionModelName}}.create({
-                data: {
-                    code: code.toString(),
-                    phoneNumber: phoneNumber,
-                }
-            });
+  async signInByPhone(data: SignInPhoneDTOType): Promise<APIResponse<OutputSignInPhoneDTOType>> {
+    try {
+      const provider = useInforuProvider();
+      const code = generateRandomSixDigits();
 
-            provider.send(data.phoneNumber, `Your code is ${code}`).then(() => {
-                console.log(`Code: ${code} sent to ${data.phoneNumber}`);
-            }).catch((e) => {
-                console.error(e);
-            });
+      const session = await client.{{lowerCase sessionModelName}}.create({
+        data: { code: code.toString(), phoneNumber: data.phoneNumber },
+      });
 
-            return toDTO<OutputSignInPhoneDTO>(OutputSignInPhoneDTO, {
-                {{lowerCase sessionModelName}}Id: {{lowerCase sessionModelName}}.id,
-                phoneNumber: phoneNumber
-            });
+      provider.send(data.phoneNumber, `Your code is ${code}`).catch(console.error);
 
-        } catch (e) {
-            console.error(e);
-            return responseError(e.message);
-        }
+      return {
+        phoneNumber: data.phoneNumber,
+        {{lowerCase sessionModelName}}Id: session.id,
+      };
+
+    } catch (e) {
+      console.error(e);
+      return responseError(e.message);
     }
+  }
 
-    async signInByEmail(data: SignInEmailDTO) {
-        try {
-            const provider = getEmailProvider();
-            const email = data.email;
-            const code = generateRandomSixDigits();
+  async signInByEmail(data: SignInEmailDTOType): Promise<APIResponse<OutputSignInEmailDTOType>> {
+    try {
+      const provider = useEmailProvider();
+      const code = generateRandomSixDigits();
 
-            const {{lowerCase sessionModelName}} = await client.{{lowerCase sessionModelName}}.create({
-                data: {
-                    code: code.toString(),
-                    email: email,
-                }
-            });
+      const session = await client.{{lowerCase sessionModelName}}.create({
+        data: { code: code.toString(), email: data.email },
+      });
 
-            provider.sendEmail(data.email, "Your code", `Your code is ${code}`).then(() => {
-                console.log(`Code: ${code} sent to ${data.email}`);
-            }).catch((e) => {
-                console.error(e);
-            });
+      provider.sendEmail(data.email, "Your code", `Your code is ${code}`).catch(console.error);
 
-            return toDTO<OutputSignInEmailDTO>(OutputSignInEmailDTO, {
-                {{lowerCase sessionModelName}}Id: {{lowerCase sessionModelName}}.id,
-                email: email
-            });
+      return {
+        email: data.email,
+        {{lowerCase sessionModelName}}Id: session.id,
+      };
 
-        } catch (e) {
-            console.error(e);
-            return responseError(e.message);
-        }
+    } catch (e) {
+      console.error(e);
+      return responseError(e.message);
     }
+  }
 }

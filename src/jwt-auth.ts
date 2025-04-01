@@ -1,8 +1,8 @@
-import { OpenAPI } from 'routing-controllers-openapi';
 import { JWTPayload, jwtVerify, SignJWT } from 'jose'
-import { createParamDecorator, UseBefore } from 'routing-controllers';
-import type { Request, Response, NextFunction } from 'express';
-import { PluginOptions } from './index.js';
+import { APIKeyEntry, PluginOptions } from './index.js';
+import type { FastifyReply, FastifyRequest } from 'fastify';
+import { TSchema } from '@sinclair/typebox';
+import { GuardFn, ResponseUnion } from '@tsdiapi/server';
 
 export type ValidateSessionFunction<T> = (session: T) => Promise<boolean | string> | (boolean | string);
 
@@ -12,6 +12,8 @@ export type JWTGuardOptions<TGuards extends Record<string, ValidateSessionFuncti
     errorMessage?: string;
     guardDescription?: string;
 };
+
+
 export interface AuthProvider<TGuards extends Record<string, ValidateSessionFunction<any>>> {
     init(config: PluginOptions<TGuards>): void;
     signIn<T extends Record<string, any>>(payload: T): Promise<string>;
@@ -54,7 +56,35 @@ export class JWTAuthProvider<TGuards extends Record<string, ValidateSessionFunct
 }
 
 const provider = new JWTAuthProvider();
-export { provider }
+
+export class ApiKeyProvider {
+    constructor() { }
+    config: PluginOptions | null = null;
+    init(config: PluginOptions) {
+        this.config = config;
+    }
+    get keys() {
+        return this.config?.apiKeys || {};
+    }
+    async verify(key: string): Promise<unknown> {
+        const entry = this.keys[key];
+        if (!(key in this.keys) || entry === 'JWT') {
+            return provider.verify(key)
+        }
+        if (entry === true) {
+            return true;
+        }
+        if (entry.validate) {
+            return await entry.validate();
+        }
+        return true;
+    }
+}
+
+const apiKeyProvider: ApiKeyProvider = new ApiKeyProvider();
+
+
+export { provider, apiKeyProvider };
 
 export const JWTTokenAuthCheckHandler = async (
     token: string
@@ -70,67 +100,107 @@ export const JWTTokenAuthCheckHandler = async (
     }
 }
 
-export function JWTGuard<TGuards extends Record<string, ValidateSessionFunction<any>>>(
-    options?: JWTGuardOptions<TGuards>
-) {
-    return function (target: any, propertyKey?: string, descriptor?: PropertyDescriptor) {
-        UseBefore(async (request: Request, response: Response, next: NextFunction) => {
-            const authHeader = request.headers.authorization;
+export function JWTGuard<TResponses extends Record<number, TSchema>>(
+    options?: JWTGuardOptions<any>
+): GuardFn<TResponses, unknown> {
+    return async (req: FastifyRequest, reply: FastifyReply): Promise<true | ResponseUnion<TResponses>> => {
+        const authHeader = req.headers.authorization;
+        if (!authHeader) {
+            return {
+                status: 403,
+                data: { message: 'Authorization header is missing' }
+            } as ResponseUnion<TResponses>;
+        }
 
-            if (!authHeader) {
-                return response.status(403).send({ status: 403, message: 'Unauthorized!' });
+        const token = authHeader.split(/\s+/)[1];
+        const session = await provider.verify(token);
+
+        if (!session) {
+            return {
+                status: 403,
+                data: { message: 'Invalid token' }
+            } as ResponseUnion<TResponses>;
+        }
+
+        let validateSession: ValidateSessionFunction<any> | undefined = options?.validateSession;
+
+        if (options?.guardName) {
+            validateSession = provider.getGuard(options.guardName as keyof typeof provider.config.guards);
+            if (!validateSession) {
+                return {
+                    status: 403,
+                    data: { message: `Guard "${String(options.guardName)}" is not registered` }
+                } as ResponseUnion<TResponses>;
             }
-
-            const token = authHeader.split(/\s+/)[1];
-
-            try {
-                const session = await provider.verify(token);
-                if (!session) {
-                    return response.status(403).send({ status: 403, message: 'Invalid token!' });
-                }
-
-                let validateSession: ValidateSessionFunction<any> | undefined = options?.validateSession;
-
-                // Если указано имя гуарда, ищем его в конфигурации
-                if (options?.guardName) {
-                    validateSession = provider.getGuard(options.guardName?.toString());
-                    if (!validateSession) {
-                        return response
-                            .status(403)
-                            .send({ status: 403, message: `Guard "${options.guardName?.toString()}" is not registered!` });
+        }
+        if (validateSession) {
+            const result = await validateSession(session);
+            if (result !== true) {
+                return {
+                    status: 403,
+                    data: {
+                        message: typeof result === 'string' ? result : options?.errorMessage || 'Unauthorized'
                     }
-                }
-
-                // Выполняем валидацию, если валидатор определён
-                if (validateSession) {
-                    const validationResult = await validateSession(session);
-                    if (validationResult !== true) {
-                        const errorMessage =
-                            typeof validationResult === 'string' ? validationResult : options?.errorMessage || 'Unauthorized!';
-                        return response.status(403).send({ status: 403, message: errorMessage });
-                    }
-                }
-
-                (request as any).session = session; // Сохраняем сессию в запросе
-                next();
-            } catch {
-                return response.status(403).send({ status: 403, message: 'Unauthorized!' });
+                } as ResponseUnion<TResponses>;
             }
-        })(target, propertyKey, descriptor);
-
-        return OpenAPI((operation) => {
-            operation.security = [{ bearerAuth: [] }];
-            if (options?.guardDescription) {
-                operation.description = operation?.description
-                    ? `${operation.description} ${options.guardDescription}`
-                    : options.guardDescription;
-            }
-            return operation;
-        })(target, propertyKey, descriptor);
+        }
+        req.session = session;
+        return true;
     };
 }
 
-export async function isJWTValid<T>(req: Request): Promise<false | T> {
+
+export function APIKeyGuard<TResponses extends Record<number, TSchema>>(
+    options?: JWTGuardOptions<any>
+): GuardFn<TResponses, unknown> {
+    return async (req: FastifyRequest, _reply: FastifyReply): Promise<true | ResponseUnion<TResponses>> => {
+        const apiKey = req.headers['x-api-key'] || req.headers.authorization;
+
+        if (!apiKey) {
+            return {
+                status: 403,
+                data: { message: 'X-API-Key header is missing' },
+            } as ResponseUnion<TResponses>;
+        }
+
+        const session = await apiKeyProvider.verify(apiKey as string);
+        if (!session) {
+            return {
+                status: 403,
+                data: { message: 'Invalid API key' },
+            } as ResponseUnion<TResponses>;
+        }
+
+        let validateSession: ValidateSessionFunction<any> | undefined = options?.validateSession;
+
+        if (options?.guardName) {
+            validateSession = provider.getGuard(options.guardName as keyof typeof provider.config.guards);
+            if (!validateSession) {
+                return {
+                    status: 403,
+                    data: { message: `Guard "${String(options.guardName)}" is not registered` },
+                } as ResponseUnion<TResponses>;
+            }
+        }
+
+        if (validateSession) {
+            const result = await validateSession(session);
+            if (result !== true) {
+                return {
+                    status: 403,
+                    data: {
+                        message: typeof result === 'string' ? result : options?.errorMessage || 'Unauthorized',
+                    },
+                } as ResponseUnion<TResponses>;
+            }
+        }
+
+        req.session = session;
+        return true;
+    };
+}
+
+export async function isBearerValid<T>(req: FastifyRequest): Promise<false | T> {
     const authHeader = req.headers.authorization;
     if (!authHeader) return false;
 
@@ -145,10 +215,15 @@ export async function isJWTValid<T>(req: Request): Promise<false | T> {
     }
 }
 
-export function CurrentSession() {
-    return createParamDecorator({
-        value: (action) => {
-            return action.request?.session || null
-        },
-    })
+export async function isApiKeyValid(req: FastifyRequest): Promise<false | unknown> {
+    const apiKey = req.headers['x-api-key'] || req.headers.authorization;
+    if (!apiKey) return false;
+    try {
+        const session = await apiKeyProvider.verify(apiKey as string);
+        if (!session) return false;
+        return session;
+    } catch (error) {
+        console.error('API key validation error:', error);
+        return false;
+    }
 }

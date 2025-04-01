@@ -1,6 +1,4 @@
-import { OpenAPI } from 'routing-controllers-openapi';
 import { jwtVerify, SignJWT } from 'jose';
-import { createParamDecorator, UseBefore } from 'routing-controllers';
 export class JWTAuthProvider {
     config;
     init(config) {
@@ -31,7 +29,31 @@ export class JWTAuthProvider {
     }
 }
 const provider = new JWTAuthProvider();
-export { provider };
+export class ApiKeyProvider {
+    constructor() { }
+    config = null;
+    init(config) {
+        this.config = config;
+    }
+    get keys() {
+        return this.config?.apiKeys || {};
+    }
+    async verify(key) {
+        const entry = this.keys[key];
+        if (!(key in this.keys) || entry === 'JWT') {
+            return provider.verify(key);
+        }
+        if (entry === true) {
+            return true;
+        }
+        if (entry.validate) {
+            return await entry.validate();
+        }
+        return true;
+    }
+}
+const apiKeyProvider = new ApiKeyProvider();
+export { provider, apiKeyProvider };
 export const JWTTokenAuthCheckHandler = async (token) => {
     try {
         const session = await provider.verify(token);
@@ -45,55 +67,89 @@ export const JWTTokenAuthCheckHandler = async (token) => {
     }
 };
 export function JWTGuard(options) {
-    return function (target, propertyKey, descriptor) {
-        UseBefore(async (request, response, next) => {
-            const authHeader = request.headers.authorization;
-            if (!authHeader) {
-                return response.status(403).send({ status: 403, message: 'Unauthorized!' });
+    return async (req, reply) => {
+        const authHeader = req.headers.authorization;
+        if (!authHeader) {
+            return {
+                status: 403,
+                data: { message: 'Authorization header is missing' }
+            };
+        }
+        const token = authHeader.split(/\s+/)[1];
+        const session = await provider.verify(token);
+        if (!session) {
+            return {
+                status: 403,
+                data: { message: 'Invalid token' }
+            };
+        }
+        let validateSession = options?.validateSession;
+        if (options?.guardName) {
+            validateSession = provider.getGuard(options.guardName);
+            if (!validateSession) {
+                return {
+                    status: 403,
+                    data: { message: `Guard "${String(options.guardName)}" is not registered` }
+                };
             }
-            const token = authHeader.split(/\s+/)[1];
-            try {
-                const session = await provider.verify(token);
-                if (!session) {
-                    return response.status(403).send({ status: 403, message: 'Invalid token!' });
-                }
-                let validateSession = options?.validateSession;
-                // Если указано имя гуарда, ищем его в конфигурации
-                if (options?.guardName) {
-                    validateSession = provider.getGuard(options.guardName?.toString());
-                    if (!validateSession) {
-                        return response
-                            .status(403)
-                            .send({ status: 403, message: `Guard "${options.guardName?.toString()}" is not registered!` });
+        }
+        if (validateSession) {
+            const result = await validateSession(session);
+            if (result !== true) {
+                return {
+                    status: 403,
+                    data: {
+                        message: typeof result === 'string' ? result : options?.errorMessage || 'Unauthorized'
                     }
-                }
-                // Выполняем валидацию, если валидатор определён
-                if (validateSession) {
-                    const validationResult = await validateSession(session);
-                    if (validationResult !== true) {
-                        const errorMessage = typeof validationResult === 'string' ? validationResult : options?.errorMessage || 'Unauthorized!';
-                        return response.status(403).send({ status: 403, message: errorMessage });
-                    }
-                }
-                request.session = session; // Сохраняем сессию в запросе
-                next();
+                };
             }
-            catch {
-                return response.status(403).send({ status: 403, message: 'Unauthorized!' });
-            }
-        })(target, propertyKey, descriptor);
-        return OpenAPI((operation) => {
-            operation.security = [{ bearerAuth: [] }];
-            if (options?.guardDescription) {
-                operation.description = operation?.description
-                    ? `${operation.description} ${options.guardDescription}`
-                    : options.guardDescription;
-            }
-            return operation;
-        })(target, propertyKey, descriptor);
+        }
+        req.session = session;
+        return true;
     };
 }
-export async function isJWTValid(req) {
+export function APIKeyGuard(options) {
+    return async (req, _reply) => {
+        const apiKey = req.headers['x-api-key'] || req.headers.authorization;
+        if (!apiKey) {
+            return {
+                status: 403,
+                data: { message: 'X-API-Key header is missing' },
+            };
+        }
+        const session = await apiKeyProvider.verify(apiKey);
+        if (!session) {
+            return {
+                status: 403,
+                data: { message: 'Invalid API key' },
+            };
+        }
+        let validateSession = options?.validateSession;
+        if (options?.guardName) {
+            validateSession = provider.getGuard(options.guardName);
+            if (!validateSession) {
+                return {
+                    status: 403,
+                    data: { message: `Guard "${String(options.guardName)}" is not registered` },
+                };
+            }
+        }
+        if (validateSession) {
+            const result = await validateSession(session);
+            if (result !== true) {
+                return {
+                    status: 403,
+                    data: {
+                        message: typeof result === 'string' ? result : options?.errorMessage || 'Unauthorized',
+                    },
+                };
+            }
+        }
+        req.session = session;
+        return true;
+    };
+}
+export async function isBearerValid(req) {
     const authHeader = req.headers.authorization;
     if (!authHeader)
         return false;
@@ -109,11 +165,19 @@ export async function isJWTValid(req) {
         return false;
     }
 }
-export function CurrentSession() {
-    return createParamDecorator({
-        value: (action) => {
-            return action.request?.session || null;
-        },
-    });
+export async function isApiKeyValid(req) {
+    const apiKey = req.headers['x-api-key'] || req.headers.authorization;
+    if (!apiKey)
+        return false;
+    try {
+        const session = await apiKeyProvider.verify(apiKey);
+        if (!session)
+            return false;
+        return session;
+    }
+    catch (error) {
+        console.error('API key validation error:', error);
+        return false;
+    }
 }
 //# sourceMappingURL=jwt-auth.js.map

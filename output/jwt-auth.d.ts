@@ -1,5 +1,7 @@
-import type { Request } from 'express';
-import { PluginOptions } from './index.js';
+import { APIKeyEntry, PluginOptions } from './index.js';
+import type { FastifyRequest } from 'fastify';
+import { TSchema } from '@sinclair/typebox';
+import { GuardFn } from '@tsdiapi/server';
 export type ValidateSessionFunction<T> = (session: T) => Promise<boolean | string> | (boolean | string);
 export type JWTGuardOptions<TGuards extends Record<string, ValidateSessionFunction<any>>> = {
     guardName?: keyof TGuards;
@@ -21,9 +23,18 @@ export declare class JWTAuthProvider<TGuards extends Record<string, ValidateSess
     getGuard(name: keyof TGuards): ValidateSessionFunction<any> | undefined;
 }
 declare const provider: JWTAuthProvider<Record<string, ValidateSessionFunction<any>>>;
-export { provider };
+export declare class ApiKeyProvider {
+    constructor();
+    config: PluginOptions | null;
+    init(config: PluginOptions): void;
+    get keys(): Record<string, true | "JWT" | APIKeyEntry>;
+    verify(key: string): Promise<unknown>;
+}
+declare const apiKeyProvider: ApiKeyProvider;
+export { provider, apiKeyProvider };
 export declare const JWTTokenAuthCheckHandler: (token: string) => Promise<unknown>;
-export declare function JWTGuard<TGuards extends Record<string, ValidateSessionFunction<any>>>(options?: JWTGuardOptions<TGuards>): (target: any, propertyKey?: string, descriptor?: PropertyDescriptor) => void;
-export declare function isJWTValid<T>(req: Request): Promise<false | T>;
-export declare function CurrentSession(): (object: Object, method: string, index: number) => void;
+export declare function JWTGuard<TResponses extends Record<number, TSchema>>(options?: JWTGuardOptions<any>): GuardFn<TResponses, unknown>;
+export declare function APIKeyGuard<TResponses extends Record<number, TSchema>>(options?: JWTGuardOptions<any>): GuardFn<TResponses, unknown>;
+export declare function isBearerValid<T>(req: FastifyRequest): Promise<false | T>;
+export declare function isApiKeyValid(req: FastifyRequest): Promise<false | unknown>;
 //# sourceMappingURL=jwt-auth.d.ts.map

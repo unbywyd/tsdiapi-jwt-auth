@@ -3,7 +3,7 @@
 [![npm version](https://badge.fury.io/js/%40tsdiapi%2Fjwt-auth.svg)](https://badge.fury.io/js/%40tsdiapi%2Fjwt-auth)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**TSDIAPI-JWT-Auth** is a plugin for the `TSDIAPI-Server` framework that simplifies JWT-based authentication and authorization. It includes utilities for token creation, session validation, and declarative guards to secure API endpoints effectively.
+**TSDIAPI-JWT-Auth** is a plugin for the `TSDIAPI-Server` framework that simplifies JWT-based authentication and authorization. It includes utilities for token creation, session validation, and custom guards to secure API endpoints effectively.
 
 ---
 
@@ -11,7 +11,6 @@
 
 - **Token Management**: Generate and verify JWT tokens with customizable payloads and expiration times.
 - **Session Protection**: Use built-in or custom session validation logic for secure API access.
-- **Declarative Guards**: Apply the `@JWTGuard` decorator to protect endpoints with optional validation handlers.
 - **Custom Guards**: Easily register and reference multiple guards to support various security requirements.
 - **Environment Integration**: Supports configuration through `.env` files to streamline deployment.
 
@@ -64,49 +63,28 @@ JWT_EXPIRATION_TIME=604800
 
 ## Protecting Endpoints
 
-### Applying the `@JWTGuard` Decorator
+### Applying the `JWTGuard`
 
-Secure API endpoints using `@JWTGuard`. You can also add custom session validation logic:
+Secure API endpoints using `JWTGuard`. You can also add custom session validation logic:
 
 ```typescript
-import { JWTGuard } from "@tsdiapi/jwt-auth";
-import { Controller, Get } from "routing-controllers";
 
-@Controller("/profile")
-export class ProfileController {
-  @Get("/")
-  @JWTGuard({
-    validateSession: async (session) => {
-      if (!session.userId) {
-        return "User not authenticated!";
-      }
-      return true;
-    },
+useRoute()
+  .get('/external/report')
+  .auth('apiKey')
+  .guard(APIKeyGuard({ guardName: 'reportService' }))
+  .code(200, Type.Object({
+      from: Type.String(),
+      key: Type.String(),
+  }))
+  .handler(async (req) => {
+    return {
+      status: 200,
+      data: { from: 'APIKey session', key: req.session.apiKey }
+    }
   })
-  getProfile() {
-    return { message: "This is a protected route!" };
-  }
-}
+  .build();
 ```
----
-
-### Accessing the Current Session
-
-Use the `@CurrentSession` decorator to retrieve the authenticated session inside your controller methods:
-
-```typescript
-import { CurrentSession } from "@tsdiapi/jwt-auth";
-import { Controller, Get } from "routing-controllers";
-
-@Controller("/session")
-export class SessionController {
-  @Get("/")
-  getSession(@CurrentSession() session: any) {
-    return { session };
-  }
-}
-```
-
 ---
 
 ## Registering Custom Guards
@@ -131,16 +109,22 @@ To use the custom guard:
 
 ```typescript
 import { JWTGuard } from "@tsdiapi/jwt-auth";
-import { Controller, Get } from "routing-controllers";
 
-@Controller("/admin")
-export class AdminController {
-  @Get("/dashboard")
-  @JWTGuard({ validateSession: "adminOnly" })
-  getDashboard() {
-    return { message: "Welcome to the admin dashboard!" };
-  }
-}
+useRoute()
+  .get('/external/report')
+  .auth('apiKey')
+  .guard(APIKeyGuard({ guardName: 'reportService' }))
+  .code(200, Type.Object({
+      from: Type.String(),
+      key: Type.String(),
+  }))
+  .handler(async (req) => {
+    return {
+      status: 200,
+      data: { from: 'APIKey session', key: req.session.apiKey }
+    }
+  })
+  .build();
 ```
 
 ---
@@ -151,10 +135,10 @@ The `JWTAuthProvider` is the core service for handling JWT-based authentication 
 
 ### Importing the Provider
 
-To access the provider, import the `getJWTAuthProvider` function:
+To access the provider, import the `useJWTAuthProvider` function:
 
 ```typescript
-import { getJWTAuthProvider } from "@tsdiapi/jwt-auth";
+import { useJWTAuthProvider } from "@tsdiapi/jwt-auth";
 ```
 
 Make sure the plugin is registered before calling this function, otherwise, an error will be thrown.
@@ -167,7 +151,7 @@ Generates a JWT token for the given user payload.
 
 #### Example:
 ```typescript
-const authProvider = getJWTAuthProvider();
+const authProvider = useJWTAuthProvider();
 
 const token = await authProvider.signIn({
   userId: "123",
@@ -182,7 +166,7 @@ Verifies a JWT token and returns the decoded session payload.
 
 #### Example:
 ```typescript
-const authProvider = getJWTAuthProvider();
+const authProvider = useJWTAuthProvider();
 
 const session = await authProvider.verify<{ userId: string; role: string }>(token);
 if (session) {
