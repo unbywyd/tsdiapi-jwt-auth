@@ -1,4 +1,5 @@
 import { jwtVerify, SignJWT } from 'jose';
+import { Type } from '@sinclair/typebox';
 export class JWTAuthProvider {
     config;
     init(config) {
@@ -66,6 +67,9 @@ export const JWTTokenAuthCheckHandler = async (token) => {
         return new Error('Token is invalid!');
     }
 };
+const forbiddenResponse = Type.Object({
+    message: Type.String()
+});
 export function JWTGuard(options) {
     return async (req, reply) => {
         const authHeader = req.headers.authorization;

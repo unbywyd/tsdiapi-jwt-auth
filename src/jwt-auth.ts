@@ -1,7 +1,7 @@
 import { JWTPayload, jwtVerify, SignJWT } from 'jose'
 import { APIKeyEntry, PluginOptions } from './index.js';
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import { TSchema } from '@sinclair/typebox';
+import { TSchema, Type, Static } from '@sinclair/typebox';
 import { GuardFn, ResponseUnion } from '@tsdiapi/server';
 
 export type ValidateSessionFunction<T> = (session: T) => Promise<boolean | string> | (boolean | string);
@@ -100,16 +100,23 @@ export const JWTTokenAuthCheckHandler = async (
     }
 }
 
-export function JWTGuard<TResponses extends Record<number, TSchema>>(
+const forbiddenResponse = Type.Object({
+    message: Type.String()
+});
+type ForbiddenResponses = {
+    403: typeof forbiddenResponse;
+};
+
+export function JWTGuard(
     options?: JWTGuardOptions<any>
-): GuardFn<TResponses, unknown> {
-    return async (req: FastifyRequest, reply: FastifyReply): Promise<true | ResponseUnion<TResponses>> => {
+): GuardFn<ForbiddenResponses, unknown> {
+    return async (req: FastifyRequest, reply: FastifyReply) => {
         const authHeader = req.headers.authorization;
         if (!authHeader) {
             return {
-                status: 403,
+                status: 403 as const,
                 data: { message: 'Authorization header is missing' }
-            } as ResponseUnion<TResponses>;
+            } as ResponseUnion<ForbiddenResponses>;
         }
 
         const token = authHeader.split(/\s+/)[1];
@@ -117,9 +124,9 @@ export function JWTGuard<TResponses extends Record<number, TSchema>>(
 
         if (!session) {
             return {
-                status: 403,
+                status: 403 as const,
                 data: { message: 'Invalid token' }
-            } as ResponseUnion<TResponses>;
+            } as ResponseUnion<ForbiddenResponses>;
         }
 
         let validateSession: ValidateSessionFunction<any> | undefined = options?.validateSession;
@@ -128,20 +135,20 @@ export function JWTGuard<TResponses extends Record<number, TSchema>>(
             validateSession = provider.getGuard(options.guardName as keyof typeof provider.config.guards);
             if (!validateSession) {
                 return {
-                    status: 403,
+                    status: 403 as const,
                     data: { message: `Guard "${String(options.guardName)}" is not registered` }
-                } as ResponseUnion<TResponses>;
+                } as ResponseUnion<ForbiddenResponses>;
             }
         }
         if (validateSession) {
             const result = await validateSession(session);
             if (result !== true) {
                 return {
-                    status: 403,
+                    status: 403 as const,
                     data: {
                         message: typeof result === 'string' ? result : options?.errorMessage || 'Unauthorized'
                     }
-                } as ResponseUnion<TResponses>;
+                } as ResponseUnion<ForbiddenResponses>;
             }
         }
         req.session = session;
@@ -150,17 +157,17 @@ export function JWTGuard<TResponses extends Record<number, TSchema>>(
 }
 
 
-export function APIKeyGuard<TResponses extends Record<number, TSchema>>(
+export function APIKeyGuard(
     options?: JWTGuardOptions<any>
-): GuardFn<TResponses, unknown> {
-    return async (req: FastifyRequest, _reply: FastifyReply): Promise<true | ResponseUnion<TResponses>> => {
+): GuardFn<ForbiddenResponses, unknown> {
+    return async (req: FastifyRequest, _reply: FastifyReply) => {
         const apiKey = req.headers['x-api-key'] || req.headers.authorization;
 
         if (!apiKey) {
             return {
                 status: 403,
                 data: { message: 'X-API-Key header is missing' },
-            } as ResponseUnion<TResponses>;
+            } as ResponseUnion<ForbiddenResponses>;
         }
 
         const session = await apiKeyProvider.verify(apiKey as string);
@@ -168,7 +175,7 @@ export function APIKeyGuard<TResponses extends Record<number, TSchema>>(
             return {
                 status: 403,
                 data: { message: 'Invalid API key' },
-            } as ResponseUnion<TResponses>;
+            } as ResponseUnion<ForbiddenResponses>;
         }
 
         let validateSession: ValidateSessionFunction<any> | undefined = options?.validateSession;
@@ -179,7 +186,7 @@ export function APIKeyGuard<TResponses extends Record<number, TSchema>>(
                 return {
                     status: 403,
                     data: { message: `Guard "${String(options.guardName)}" is not registered` },
-                } as ResponseUnion<TResponses>;
+                } as ResponseUnion<ForbiddenResponses>;
             }
         }
 
@@ -191,7 +198,7 @@ export function APIKeyGuard<TResponses extends Record<number, TSchema>>(
                     data: {
                         message: typeof result === 'string' ? result : options?.errorMessage || 'Unauthorized',
                     },
-                } as ResponseUnion<TResponses>;
+                } as ResponseUnion<ForbiddenResponses>;
             }
         }
 

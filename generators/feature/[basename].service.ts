@@ -1,12 +1,15 @@
 import { client } from '@tsdiapi/prisma';
+import { getContext } from '@tsdiapi/server';
 import { useEmailProvider } from '@tsdiapi/email';
-import { getJWTAuthProvider } from '@tsdiapi/jwt-auth';
-
+import { useJWTAuthProvider } from '@tsdiapi/jwt-auth';
 import { Service } from "typedi";
-import { App } from '@tsdiapi/server';
 import { Type, Static } from '@sinclair/typebox';
-import { APIResponse, responseError } from '@tsdiapi/server';
 import { useInforuProvider } from '@tsdiapi/inforu';
+
+export const ErrorResponseDTO = Type.Object({
+  message: Type.String(),
+});
+export type ErrorResponseType = Static<typeof ErrorResponseDTO>;
 
 // === DTOs ===
 export const SignInEmailDTO = Type.Object({
@@ -46,7 +49,7 @@ export type Output{{pascalCase userModelName}}DTOType = Static<typeof Output{{pa
 
 export const OutputVerifyDTO = Type.Object({
   accessToken: Type.String(),
-  {{lowerCase userModelName}}: Output{{pascalCase userModelName}}DTO,
+  user: Output{{pascalCase userModelName}}DTO,
 });
 export type OutputVerifyDTOType = Static<typeof OutputVerifyDTO>;
 
@@ -59,16 +62,19 @@ export type {{pascalCase userModelName}}Session = {
 function generateRandomSixDigits(): number {
   return Math.floor(100000 + Math.random() * 900000);
 }
-
+const responseError = (message: string) => {
+  throw new Error(message);
+}
 @Service()
-export default class {{className}}Service {
-  async verify(data: InputVerifyDTOType): Promise<APIResponse<OutputVerifyDTOType>> {
+export default class AuthService {
+  async verify(data: InputVerifyDTOType): Promise<OutputVerifyDTOType> {
+    const appContext = getContext();
     try {
       const session = await client.{{lowerCase sessionModelName}}.findUnique({
         where: { id: data.{{lowerCase sessionModelName}}Id }
       });
 
-      const isDev = App.isDevelopment;
+      const isDev = appContext.environment === 'development';
 
       if (!isDev) {
         if (!session) return responseError("Invalid session");
@@ -94,7 +100,7 @@ export default class {{className}}Service {
         });
       }
 
-      const authProvider = getJWTAuthProvider();
+      const authProvider = useJWTAuthProvider();
       const accessToken = await authProvider.signIn<{{pascalCase userModelName}}Session>({
         id: user.id,
         email: user.email,
@@ -103,7 +109,7 @@ export default class {{className}}Service {
 
       return {
         accessToken,
-        {{lowerCase userModelName}}: user
+        user: user
       };
 
     } catch (e) {
@@ -112,7 +118,7 @@ export default class {{className}}Service {
     }
   }
 
-  async signInByPhone(data: SignInPhoneDTOType): Promise<APIResponse<OutputSignInPhoneDTOType>> {
+  async signInByPhone(data: SignInPhoneDTOType): Promise<OutputSignInPhoneDTOType> {
     try {
       const provider = useInforuProvider();
       const code = generateRandomSixDigits();
@@ -134,7 +140,7 @@ export default class {{className}}Service {
     }
   }
 
-  async signInByEmail(data: SignInEmailDTOType): Promise<APIResponse<OutputSignInEmailDTOType>> {
+  async signInByEmail(data: SignInEmailDTOType): Promise<OutputSignInEmailDTOType> {
     try {
       const provider = useEmailProvider();
       const code = generateRandomSixDigits();

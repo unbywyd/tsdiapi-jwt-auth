@@ -1,13 +1,36 @@
 import { client } from '@tsdiapi/prisma';
-import { getEmailProvider } from '@tsdiapi/email';
-import { getJWTAuthProvider, isJWTValid } from '@tsdiapi/jwt-auth';
+import { useEmailProvider } from '@tsdiapi/email';
+import { useJWTAuthProvider, isBearerValid } from '@tsdiapi/jwt-auth';
 import { CryptoService } from '@tsdiapi/crypto';
 import { Service } from "typedi";
-import { App, APIResponse, responseError } from '@tsdiapi/server';
-import { getInforuProvider } from '@tsdiapi/inforu';
+import { getContext, DateString } from '@tsdiapi/server';
+import { useInforuProvider } from '@tsdiapi/inforu';
 import { Type, Static } from '@sinclair/typebox';
-import { OutputAdminDTO } from '@base/prisma-models/models/OutputAdminDTO.model.js';
-import { Output{{pascalCase userModelName}}DTO } from '@base/prisma-models/models/Output{{pascalCase userModelName}}DTO.model.js';
+
+export const ErrorResponseDTO = Type.Object({
+  message: Type.String(),
+});
+export type ErrorResponseType = Static<typeof ErrorResponseDTO>;
+
+export const OutputAdminDTO = Type.Object({
+  id: Type.String(),
+  email: Type.Optional(Type.String()),
+  phoneNumber: Type.Optional(Type.String()),
+  name: Type.Optional(Type.String()),
+  createdAt: DateString(),
+  updatedAt: DateString(),
+});
+export type OutputAdminDTOType = Static<typeof OutputAdminDTO>;
+
+export const Output{{pascalCase userModelName}}DTO = Type.Object({
+  id: Type.String(),
+  email: Type.Optional(Type.String()),
+  phoneNumber: Type.Optional(Type.String()),
+  adminId: Type.Optional(Type.String()),
+  createdAt: DateString(),
+  updatedAt: DateString(),
+  deletedAt: DateString(),
+});
 
 export const InputSignUpAdminDTO = Type.Object({
   phoneNumber: Type.String(),
@@ -72,7 +95,8 @@ export type {{pascalCase userModelName}}Session = {
 };
 
 export const AdminGuard = async (req: any) => {
-  const session = await isJWTValid<{{pascalCase userModelName}}Session>(req);
+  const session = await isBearerValid<UserSession>(req);
+  if (!session) return false;
   return !!session?.adminId;
 };
 
@@ -80,11 +104,15 @@ function generateRandomSixDigits(): number {
   return Math.floor(100000 + Math.random() * 900000);
 }
 
+const responseError = (message: string) => {
+  throw new Error(message);
+}
+
 @Service()
 export default class {{className}}Service {
   constructor(public cryptoService: CryptoService) {}
 
-  async signInByAdmin(data: InputSignInAdminDTOType): Promise<APIResponse<OutputAdminSessionDTOType>> {
+  async signInByAdmin(data: InputSignInAdminDTOType): Promise<OutputAdminSessionDTOType> {
     try {
       const admin = await client.admin.findUnique({ where: { phoneNumber: data.phoneNumber } });
       if (!admin) return responseError("User not found");
@@ -92,7 +120,7 @@ export default class {{className}}Service {
       const passwordIsValid = this.cryptoService.verifyPassword(data.password, admin.password);
       if (!passwordIsValid) return responseError("Invalid password");
 
-      const accessToken = await getJWTAuthProvider().signIn<{{pascalCase userModelName}}Session>({
+      const accessToken = await useJWTAuthProvider().signIn<{{pascalCase userModelName}}Session>({
         id: null,
         phoneNumber: admin.phoneNumber,
         adminId: admin.id
@@ -105,9 +133,10 @@ export default class {{className}}Service {
     }
   }
 
-  async signUpAdmin(data: InputSignUpAdminDTOType): Promise<APIResponse<OutputAdminSessionDTOType>> {
+  async signUpAdmin(data: InputSignUpAdminDTOType): Promise<OutputAdminSessionDTOType> {
     try {
-      const secret = await App.env('JWT_ADMIN_SECRET');
+      const appContext = getContext();     
+      const secret =  appContext.projectConfig.get("JWT_ADMIN_SECRET");
       if (data.secret !== secret) return responseError("Invalid secret");
 
       const adminExists = await client.admin.findUnique({ where: { phoneNumber: data.phoneNumber } });
@@ -123,7 +152,7 @@ export default class {{className}}Service {
         }
       });
 
-      const accessToken = await getJWTAuthProvider().signIn<{{pascalCase userModelName}}Session>({
+      const accessToken = await useJWTAuthProvider().signIn<{{pascalCase userModelName}}Session>({
         id: null,
         phoneNumber: newAdmin.phoneNumber,
         adminId: newAdmin.id
@@ -136,9 +165,9 @@ export default class {{className}}Service {
     }
   }
 
-  async signInByEmail(data: SignInEmailDTOType): Promise<APIResponse<OutputSignInEmailDTOType>> {
+  async signInByEmail(data: SignInEmailDTOType): Promise<OutputSignInEmailDTOType> {
     try {
-      const provider = getEmailProvider();
+      const provider = useEmailProvider();
       const code = generateRandomSixDigits();
 
       const session = await client.{{lowerCase sessionModelName}}.create({
@@ -157,9 +186,9 @@ export default class {{className}}Service {
     }
   }
 
-  async signInByPhone(data: SignInPhoneDTOType): Promise<APIResponse<OutputSignInPhoneDTOType>> {
+  async signInByPhone(data: SignInPhoneDTOType): Promise<OutputSignInPhoneDTOType> {
     try {
-      const provider = getInforuProvider();
+      const provider = useInforuProvider();
       const code = generateRandomSixDigits();
 
       const session = await client.{{lowerCase sessionModelName}}.create({
@@ -178,10 +207,12 @@ export default class {{className}}Service {
     }
   }
 
-  async verify(data: InputVerifyDTOType): Promise<APIResponse<OutputVerifyDTOType>> {
+  async verify(data: InputVerifyDTOType): Promise<OutputVerifyDTOType> {
     try {
+      const appContext = getContext();
+      const isDev = appContext.environment === 'development';
       const session = await client.{{lowerCase sessionModelName}}.findUnique({ where: { id: data.{{lowerCase sessionModelName}}Id } });
-      if (!App.isDevelopment) {
+      if (!isDev) {
         if (!session || session.code !== data.code || session.deletedAt) {
           return responseError("Invalid or expired code");
         }
@@ -204,7 +235,7 @@ export default class {{className}}Service {
         user = await client.{{lowerCase userModelName}}.create({ data: { email, phoneNumber } });
       }
 
-      const accessToken = await getJWTAuthProvider().signIn<{{pascalCase userModelName}}Session>({
+      const accessToken = await useJWTAuthProvider().signIn<{{pascalCase userModelName}}Session>({
         id: user.id,
         email: user.email,
         phoneNumber: user.phoneNumber

@@ -1,6 +1,5 @@
 import { APIKeyEntry, PluginOptions } from './index.js';
 import type { FastifyRequest } from 'fastify';
-import { TSchema } from '@sinclair/typebox';
 import { GuardFn } from '@tsdiapi/server';
 export type ValidateSessionFunction<T> = (session: T) => Promise<boolean | string> | (boolean | string);
 export type JWTGuardOptions<TGuards extends Record<string, ValidateSessionFunction<any>>> = {
@@ -33,8 +32,14 @@ export declare class ApiKeyProvider {
 declare const apiKeyProvider: ApiKeyProvider;
 export { provider, apiKeyProvider };
 export declare const JWTTokenAuthCheckHandler: (token: string) => Promise<unknown>;
-export declare function JWTGuard<TResponses extends Record<number, TSchema>>(options?: JWTGuardOptions<any>): GuardFn<TResponses, unknown>;
-export declare function APIKeyGuard<TResponses extends Record<number, TSchema>>(options?: JWTGuardOptions<any>): GuardFn<TResponses, unknown>;
+declare const forbiddenResponse: import("@sinclair/typebox").TObject<{
+    message: import("@sinclair/typebox").TString;
+}>;
+type ForbiddenResponses = {
+    403: typeof forbiddenResponse;
+};
+export declare function JWTGuard(options?: JWTGuardOptions<any>): GuardFn<ForbiddenResponses, unknown>;
+export declare function APIKeyGuard(options?: JWTGuardOptions<any>): GuardFn<ForbiddenResponses, unknown>;
 export declare function isBearerValid<T>(req: FastifyRequest): Promise<false | T>;
 export declare function isApiKeyValid(req: FastifyRequest): Promise<false | unknown>;
 //# sourceMappingURL=jwt-auth.d.ts.map
