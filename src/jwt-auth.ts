@@ -156,6 +156,9 @@ export function JWTGuard(
     };
 }
 
+export function useSession<T>(req: FastifyRequest): T | undefined {
+    return req.session as T | undefined;
+}
 
 export function APIKeyGuard(
     options?: JWTGuardOptions<any>

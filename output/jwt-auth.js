@@ -112,6 +112,9 @@ export function JWTGuard(options) {
         return true;
     };
 }
+export function useSession(req) {
+    return req.session;
+}
 export function APIKeyGuard(options) {
     return async (req, _reply) => {
         const apiKey = req.headers['x-api-key'] || req.headers.authorization;

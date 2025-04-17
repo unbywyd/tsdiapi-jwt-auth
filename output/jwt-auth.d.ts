@@ -39,6 +39,7 @@ type ForbiddenResponses = {
     403: typeof forbiddenResponse;
 };
 export declare function JWTGuard(options?: JWTGuardOptions<any>): GuardFn<ForbiddenResponses, unknown>;
+export declare function useSession<T>(req: FastifyRequest): T | undefined;
 export declare function APIKeyGuard(options?: JWTGuardOptions<any>): GuardFn<ForbiddenResponses, unknown>;
 export declare function isBearerValid<T>(req: FastifyRequest): Promise<false | T>;
 export declare function isApiKeyValid(req: FastifyRequest): Promise<false | unknown>;
