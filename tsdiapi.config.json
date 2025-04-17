@@ -47,6 +47,9 @@
             }
         }
     ],
+    "prisma": {
+        "required": true
+    },
     "generators": [
         {
             "name": "feature",
