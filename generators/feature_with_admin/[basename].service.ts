@@ -207,6 +207,16 @@ export default class {{className}}Service {
     }
   }
 
+  async getCurrentUser(session: {{pascalCase userModelName}}Session): Promise<Output{{pascalCase userModelName}}DTOType> {
+    const user = await client.{{lowerCase userModelName}}.findUnique({
+      where: { id: session.id }
+    });
+
+    if (!user) return responseError("{{pascalCase userModelName}} not found");
+
+    return user;
+  }
+
   async verify(data: InputVerifyDTOType): Promise<OutputVerifyDTOType> {
     try {
       const appContext = getContext();

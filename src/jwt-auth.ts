@@ -218,6 +218,7 @@ export async function isBearerValid<T>(req: FastifyRequest): Promise<false | T> 
     try {
         const session = await provider.verify(token);
         if (!session) return false;
+        req.session = session;
         return session as T;
     } catch (error) {
         console.error('JWT validation error:', error);
@@ -231,6 +232,7 @@ export async function isApiKeyValid(req: FastifyRequest): Promise<false | unknow
     try {
         const session = await apiKeyProvider.verify(apiKey as string);
         if (!session) return false;
+        req.session = session;
         return session;
     } catch (error) {
         console.error('API key validation error:', error);

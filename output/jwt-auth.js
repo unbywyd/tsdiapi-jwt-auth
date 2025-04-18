@@ -165,6 +165,7 @@ export async function isBearerValid(req) {
         const session = await provider.verify(token);
         if (!session)
             return false;
+        req.session = session;
         return session;
     }
     catch (error) {
@@ -180,6 +181,7 @@ export async function isApiKeyValid(req) {
         const session = await apiKeyProvider.verify(apiKey);
         if (!session)
             return false;
+        req.session = session;
         return session;
     }
     catch (error) {

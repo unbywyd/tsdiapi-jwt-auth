@@ -12,10 +12,11 @@ import {{className}}Service, {
   OutputAdminSessionDTO,
   ErrorResponseDTO,
   OutputAdminDTO,
-  {{pascalCase userModelName}}Session
+  {{pascalCase userModelName}}Session,
+  Output{{pascalCase userModelName}}DTO
 } from "./{{kebabCase name}}.service.js";
 import { client } from "@tsdiapi/prisma";
-import { JWTGuard } from "@tsdiapi/jwt-auth";
+import { JWTGuard, isBearerValid } from "@tsdiapi/jwt-auth";
 
 export default function controllers({useRoute}: AppContext) {
   const service = Container.get({{className}}Service);
@@ -71,6 +72,41 @@ export default function controllers({useRoute}: AppContext) {
       } catch (error) {
         return {
           status: 400,
+          data: { message: error.message }
+        };
+      }
+    })
+    .build();
+
+    useRoute('auth')
+    .get("/me")
+    .summary("Get Current User")
+    .code(401, ErrorResponseDTO)
+    
+    .auth('bearer', async (req, reply) => {
+      const isValid = await isBearerValid(req);
+      if (!isValid) {
+        return {
+          status: 401,
+          data: { message: 'Invalid access token' }
+        };
+      }
+      return true;
+    })
+    .description("Get information about the currently authenticated user")
+    .code(200, Output{{pascalCase userModelName}}DTO)
+    .handler(async (req) => {
+      const session = req.session;
+      console.log(session);
+      try {
+        const result = await service.getCurrentUser(session as {{pascalCase userModelName}}Session);
+        return {
+          status: 200,
+          data: result
+        };
+      } catch (error) {
+        return {
+          status: 401,
           data: { message: error.message }
         };
       }

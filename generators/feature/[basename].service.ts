@@ -139,6 +139,16 @@ export default class AuthService {
       return responseError(e.message);
     }
   }
+  
+  async getCurrentUser(session: {{pascalCase userModelName}}Session): Promise<Output{{pascalCase userModelName}}DTOType> {
+    const user = await client.{{lowerCase userModelName}}.findUnique({
+      where: { id: session.id }
+    });
+
+    if (!user) return responseError("{{pascalCase userModelName}} not found");
+
+    return user;
+  }
 
   async signInByEmail(data: SignInEmailDTOType): Promise<OutputSignInEmailDTOType> {
     try {
