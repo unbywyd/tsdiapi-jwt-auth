@@ -68,7 +68,7 @@ export const JWTTokenAuthCheckHandler = async (token) => {
     }
 };
 const forbiddenResponse = Type.Object({
-    error: Type.Optional(Type.String()),
+    error: Type.String(),
 });
 export function JWTGuard(options) {
     return async (req, reply) => {

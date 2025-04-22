@@ -173,6 +173,48 @@ useRoute()
 2. Your route must support 403 status code to handle unauthorized access cases
 3. The guard will return the error message defined in the guard function when validation fails
 
+### Accessing User Session Data
+
+After successful authentication, you can access the user's session data through `req.session`. The session contains the decoded JWT payload:
+
+```typescript
+useRoute()
+  .get('/user/profile')
+  .code(200, Type.Object({
+      userId: Type.String(),
+      role: Type.String(),
+  }))
+  .code(403, Type.Object({
+      error: Type.String(),
+  }))
+  .auth('bearer')
+  .guard(JWTGuard())
+  .handler(async (req) => {
+    // Access user session data
+    const { userId, role } = req.session;
+    
+    return {
+      status: 200,
+      data: { userId, role }
+    }
+  })
+  .build();
+```
+
+The session object contains all the data that was included in the JWT token when it was created. For example, if you signed in with:
+```typescript
+const token = await authProvider.signIn({
+  userId: "123",
+  role: "admin",
+  permissions: ["read", "write"]
+});
+```
+
+Then in your route handler, you can access all these fields:
+```typescript
+const { userId, role, permissions } = req.session;
+```
+
 ---
 
 ## Using the JWT Auth Provider

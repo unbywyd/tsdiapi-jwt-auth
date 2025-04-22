@@ -101,7 +101,7 @@ export const JWTTokenAuthCheckHandler = async (
 }
 
 const forbiddenResponse = Type.Object({
-    error: Type.Optional(Type.String()),
+    error: Type.String(),
 });
 type ForbiddenResponses = {
     403: typeof forbiddenResponse;
