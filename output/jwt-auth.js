@@ -68,7 +68,7 @@ export const JWTTokenAuthCheckHandler = async (token) => {
     }
 };
 const forbiddenResponse = Type.Object({
-    message: Type.String()
+    error: Type.Optional(Type.String()),
 });
 export function JWTGuard(options) {
     return async (req, reply) => {
@@ -76,7 +76,7 @@ export function JWTGuard(options) {
         if (!authHeader) {
             return {
                 status: 403,
-                data: { message: 'Authorization header is missing' }
+                data: { error: 'Authorization header is missing' }
             };
         }
         const token = authHeader.split(/\s+/)[1];
@@ -84,7 +84,7 @@ export function JWTGuard(options) {
         if (!session) {
             return {
                 status: 403,
-                data: { message: 'Invalid token' }
+                data: { error: 'Invalid token' }
             };
         }
         let validateSession = options?.validateSession;
@@ -93,7 +93,7 @@ export function JWTGuard(options) {
             if (!validateSession) {
                 return {
                     status: 403,
-                    data: { message: `Guard "${String(options.guardName)}" is not registered` }
+                    data: { error: `Guard "${String(options.guardName)}" is not registered` }
                 };
             }
         }
@@ -103,7 +103,7 @@ export function JWTGuard(options) {
                 return {
                     status: 403,
                     data: {
-                        message: typeof result === 'string' ? result : options?.errorMessage || 'Unauthorized'
+                        error: typeof result === 'string' ? result : options?.errorMessage || 'Unauthorized'
                     }
                 };
             }
@@ -121,14 +121,14 @@ export function APIKeyGuard(options) {
         if (!apiKey) {
             return {
                 status: 403,
-                data: { message: 'X-API-Key header is missing' },
+                data: { error: 'X-API-Key header is missing' },
             };
         }
         const session = await apiKeyProvider.verify(apiKey);
         if (!session) {
             return {
                 status: 403,
-                data: { message: 'Invalid API key' },
+                data: { error: 'Invalid API key' },
             };
         }
         let validateSession = options?.validateSession;
@@ -137,7 +137,7 @@ export function APIKeyGuard(options) {
             if (!validateSession) {
                 return {
                     status: 403,
-                    data: { message: `Guard "${String(options.guardName)}" is not registered` },
+                    data: { error: `Guard "${String(options.guardName)}" is not registered` },
                 };
             }
         }
@@ -147,7 +147,7 @@ export function APIKeyGuard(options) {
                 return {
                     status: 403,
                     data: {
-                        message: typeof result === 'string' ? result : options?.errorMessage || 'Unauthorized',
+                        error: typeof result === 'string' ? result : options?.errorMessage || 'Unauthorized',
                     },
                 };
             }

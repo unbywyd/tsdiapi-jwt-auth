@@ -33,7 +33,7 @@ declare const apiKeyProvider: ApiKeyProvider;
 export { provider, apiKeyProvider };
 export declare const JWTTokenAuthCheckHandler: (token: string) => Promise<unknown>;
 declare const forbiddenResponse: import("@sinclair/typebox").TObject<{
-    message: import("@sinclair/typebox").TString;
+    error: import("@sinclair/typebox").TOptional<import("@sinclair/typebox").TString>;
 }>;
 type ForbiddenResponses = {
     403: typeof forbiddenResponse;

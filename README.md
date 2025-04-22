@@ -63,69 +63,115 @@ JWT_EXPIRATION_TIME=604800
 
 ## Protecting Endpoints
 
+**Important Rules for Route Definition:**
+1. Every route using guards **MUST** define a 403 response code with the following schema:
+   ```typescript
+   .code(403, Type.Object({
+       error: Type.String(),
+   }))
+   ```
+2. Response codes (`code()`) must be defined immediately after the HTTP method (get, post, etc.)
+3. Authentication (`auth()`) and guards (`guard()`) should be defined after response codes
+4. The handler should be defined last
+
 ### Applying the `JWTGuard`
 
-Secure API endpoints using `JWTGuard`. You can also add custom session validation logic:
+Secure API endpoints using `JWTGuard`. You can use it in two ways:
 
+1. For standard bearer token validation:
 ```typescript
-
 useRoute()
-  .get('/external/report')
-  .auth('apiKey')
-  .guard(APIKeyGuard({ guardName: 'reportService' }))
+  .get('/protected/endpoint')
   .code(200, Type.Object({
-      from: Type.String(),
-      key: Type.String(),
+      message: Type.String(),
   }))
+  .code(403, Type.Object({
+      error: Type.String(),
+  }))
+  .auth('bearer')
+  .guard(JWTGuard())
   .handler(async (req) => {
     return {
       status: 200,
-      data: { from: 'APIKey session', key: req.session.apiKey }
+      data: { message: 'Access granted' }
     }
   })
   .build();
 ```
----
 
-## Registering Custom Guards
+2. For custom guard validation:
+```typescript
+useRoute()
+  .get('/admin/dashboard')
+  .code(200, Type.Object({
+      message: Type.String(),
+  }))
+  .code(403, Type.Object({
+      error: Type.String(),
+  }))
+  .auth('bearer')
+  .guard(JWTGuard({ guardName: 'adminOnly' }))
+  .handler(async (req) => {
+    return {
+      status: 200,
+      data: { message: 'Welcome to admin dashboard' }
+    }
+  })
+  .build();
+```
+
+**Note:** Make sure you have registered the guard with the same name (`adminOnly` in this example) during plugin initialization when using custom guards.
+
+### Registering Custom Guards
 
 You can register custom guards during plugin initialization. These guards can later be referenced by name:
 
 ```typescript
-createPlugin({
-  secretKey: "your-secret-key",
-  guards: {
-    adminOnly: async (session) => {
-      if (session.role !== "admin") {
-        return "Only administrators are allowed!";
-      }
-      return true;
-    },
-  },
+createApp({
+  plugins: [
+    createPlugin({
+      secretKey: "your-secret-key",
+      guards: {
+        adminOnly: async (session) => {
+          if (session.role !== "admin") {
+            return "Only administrators are allowed!";
+          }
+          return true;
+        },
+      },
+    }),
+  ],
 });
 ```
 
-To use the custom guard:
+To use the custom guard in your routes:
 
 ```typescript
 import { JWTGuard } from "@tsdiapi/jwt-auth";
 
 useRoute()
-  .get('/external/report')
-  .auth('apiKey')
-  .guard(APIKeyGuard({ guardName: 'reportService' }))
+  .get('/admin/dashboard')
   .code(200, Type.Object({
-      from: Type.String(),
-      key: Type.String(),
+      message: Type.String(),
   }))
+  .code(403, Type.Object({
+      error: Type.String(),
+  }))
+  .auth('bearer')
+  .guard(JWTGuard({ guardName: 'adminOnly' }))
   .handler(async (req) => {
     return {
       status: 200,
-      data: { from: 'APIKey session', key: req.session.apiKey }
+      data: { message: 'Welcome to admin dashboard' }
     }
   })
   .build();
 ```
+
+**Important Notes:**
+1. The `guardName` in `JWTGuard` must match exactly with one of the guards registered in the plugin initialization
+2. Your route must support 403 status code to handle unauthorized access cases
+3. The guard will return the error message defined in the guard function when validation fails
 
 ---
 

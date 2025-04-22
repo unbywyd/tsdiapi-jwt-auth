@@ -101,7 +101,7 @@ export const JWTTokenAuthCheckHandler = async (
 }
 
 const forbiddenResponse = Type.Object({
-    message: Type.String()
+    error: Type.Optional(Type.String()),
 });
 type ForbiddenResponses = {
     403: typeof forbiddenResponse;
@@ -115,7 +115,7 @@ export function JWTGuard(
         if (!authHeader) {
             return {
                 status: 403 as const,
-                data: { message: 'Authorization header is missing' }
+                data: { error: 'Authorization header is missing' }
             } as ResponseUnion<ForbiddenResponses>;
         }
 
@@ -125,7 +125,7 @@ export function JWTGuard(
         if (!session) {
             return {
                 status: 403 as const,
-                data: { message: 'Invalid token' }
+                data: { error: 'Invalid token' }
             } as ResponseUnion<ForbiddenResponses>;
         }
 
@@ -136,7 +136,7 @@ export function JWTGuard(
             if (!validateSession) {
                 return {
                     status: 403 as const,
-                    data: { message: `Guard "${String(options.guardName)}" is not registered` }
+                    data: { error: `Guard "${String(options.guardName)}" is not registered` }
                 } as ResponseUnion<ForbiddenResponses>;
             }
         }
@@ -146,7 +146,7 @@ export function JWTGuard(
                 return {
                     status: 403 as const,
                     data: {
-                        message: typeof result === 'string' ? result : options?.errorMessage || 'Unauthorized'
+                        error: typeof result === 'string' ? result : options?.errorMessage || 'Unauthorized'
                     }
                 } as ResponseUnion<ForbiddenResponses>;
             }
@@ -169,7 +169,7 @@ export function APIKeyGuard(
         if (!apiKey) {
             return {
                 status: 403,
-                data: { message: 'X-API-Key header is missing' },
+                data: { error: 'X-API-Key header is missing' },
             } as ResponseUnion<ForbiddenResponses>;
         }
 
@@ -177,7 +177,7 @@ export function APIKeyGuard(
         if (!session) {
             return {
                 status: 403,
-                data: { message: 'Invalid API key' },
+                data: { error: 'Invalid API key' },
             } as ResponseUnion<ForbiddenResponses>;
         }
 
@@ -188,7 +188,7 @@ export function APIKeyGuard(
             if (!validateSession) {
                 return {
                     status: 403,
-                    data: { message: `Guard "${String(options.guardName)}" is not registered` },
+                    data: { error: `Guard "${String(options.guardName)}" is not registered` },
                 } as ResponseUnion<ForbiddenResponses>;
             }
         }
@@ -199,7 +199,7 @@ export function APIKeyGuard(
                 return {
                     status: 403,
                     data: {
-                        message: typeof result === 'string' ? result : options?.errorMessage || 'Unauthorized',
+                        error: typeof result === 'string' ? result : options?.errorMessage || 'Unauthorized',
                     },
                 } as ResponseUnion<ForbiddenResponses>;
             }
