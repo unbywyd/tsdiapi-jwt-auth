@@ -178,6 +178,8 @@ useRoute()
 After successful authentication, you can access the user's session data through `req.session`. The session contains the decoded JWT payload:
 
 ```typescript
+import { JWTGuard, useSession } from "@tsdiapi/jwt-auth";
+
 useRoute()
   .get('/user/profile')
   .code(200, Type.Object({
@@ -190,15 +192,31 @@ useRoute()
   .auth('bearer')
   .guard(JWTGuard())
   .handler(async (req) => {
-    // Access user session data
-    const { userId, role } = req.session;
+    // Type-safe session access
+    const session = useSession<{
+      userId: string;
+      role: string;
+    }>(req);
     
     return {
       status: 200,
-      data: { userId, role }
+      data: { userId: session.userId, role: session.role }
     }
   })
   .build();
+```
+
+For better type safety, you can define your session type once and reuse it:
+
+```typescript
+type UserSession = {
+  userId: string;
+  role: string;
+  permissions: string[];
+};
+
+// In your route handler
+const session = useSession<UserSession>(req);
 ```
 
 The session object contains all the data that was included in the JWT token when it was created. For example, if you signed in with:
@@ -210,9 +228,10 @@ const token = await authProvider.signIn({
 });
 ```
 
-Then in your route handler, you can access all these fields:
+Then in your route handler, you can access all these fields with type safety:
 ```typescript
-const { userId, role, permissions } = req.session;
+const session = useSession<UserSession>(req);
+const { userId, role, permissions } = session;
 ```
 
 ---
