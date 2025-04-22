@@ -31,6 +31,7 @@ export const Output{{pascalCase userModelName}}DTO = Type.Object({
   updatedAt: DateString(),
   deletedAt: DateString(),
 });
+export type Output{{pascalCase userModelName}}DTOType = Static<typeof Output{{pascalCase userModelName}}DTO>;
 
 export const InputSignUpAdminDTO = Type.Object({
   phoneNumber: Type.String(),
