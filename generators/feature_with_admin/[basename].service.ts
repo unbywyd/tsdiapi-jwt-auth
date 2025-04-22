@@ -8,7 +8,7 @@ import { useInforuProvider } from '@tsdiapi/inforu';
 import { Type, Static } from '@sinclair/typebox';
 
 export const ErrorResponseDTO = Type.Object({
-  message: Type.String(),
+  error: Type.String(),
 });
 export type ErrorResponseType = Static<typeof ErrorResponseDTO>;
 

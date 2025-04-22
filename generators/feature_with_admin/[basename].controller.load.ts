@@ -34,7 +34,7 @@ export default function controllers({useRoute}: AppContext) {
       } catch (error) {
         return {
           status: 400,
-          data: { message: error.message }
+          data: { error: error.message }
         };
       }
     })
@@ -53,7 +53,7 @@ export default function controllers({useRoute}: AppContext) {
         } catch (error) {
           return {
             status: 400,
-            data: { message: error.message }
+            data: { error: error.message }
           };
         }
     })
@@ -72,7 +72,7 @@ export default function controllers({useRoute}: AppContext) {
       } catch (error) {
         return {
           status: 400,
-          data: { message: error.message }
+          data: { error: error.message }
         };
       }
     })
@@ -88,7 +88,7 @@ export default function controllers({useRoute}: AppContext) {
       if (!isValid) {
         return {
           status: 401,
-          data: { message: 'Invalid access token' }
+          data: { error: 'Invalid access token' }
         };
       }
       return true;
@@ -107,7 +107,7 @@ export default function controllers({useRoute}: AppContext) {
       } catch (error) {
         return {
           status: 401,
-          data: { message: error.message }
+          data: { error: error.message }
         };
       }
     })
@@ -126,7 +126,7 @@ export default function controllers({useRoute}: AppContext) {
       } catch (error) {
         return {
           status: 400,
-          data: { message: error.message }
+          data: { error: error.message }
         };
       }
     })
@@ -145,7 +145,7 @@ export default function controllers({useRoute}: AppContext) {
       } catch (error) {
         return {
           status: 400,
-          data: { message: error.message }
+          data: { error: error.message }
         };
       }
     })
@@ -169,7 +169,7 @@ export default function controllers({useRoute}: AppContext) {
       } catch (error) {
         return {
           status: 400,
-          data: { message: error.message }
+          data: { error: error.message }
         };
       }
     })
