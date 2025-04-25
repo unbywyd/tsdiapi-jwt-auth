@@ -72,44 +72,53 @@ const forbiddenResponse = Type.Object({
 });
 export function JWTGuard(options) {
     return async (req, reply) => {
-        const authHeader = req.headers.authorization;
-        if (!authHeader) {
-            return {
-                status: 403,
-                data: { error: 'Authorization header is missing' }
-            };
-        }
-        const token = authHeader.split(/\s+/)[1];
-        const session = await provider.verify(token);
-        if (!session) {
-            return {
-                status: 403,
-                data: { error: 'Invalid token' }
-            };
-        }
-        let validateSession = options?.validateSession;
-        if (options?.guardName) {
-            validateSession = provider.getGuard(options.guardName);
-            if (!validateSession) {
+        try {
+            const authHeader = req.headers.authorization;
+            if (!authHeader) {
                 return {
                     status: 403,
-                    data: { error: `Guard "${String(options.guardName)}" is not registered` }
+                    data: { error: 'Authorization header is missing' }
                 };
             }
-        }
-        if (validateSession) {
-            const result = await validateSession(session);
-            if (result !== true) {
+            const token = authHeader.split(/\s+/)[1];
+            const session = await provider.verify(token);
+            if (!session) {
                 return {
                     status: 403,
-                    data: {
-                        error: typeof result === 'string' ? result : options?.errorMessage || 'Unauthorized'
-                    }
+                    data: { error: 'Invalid token' }
                 };
             }
+            let validateSession = options?.validateSession;
+            if (options?.guardName) {
+                validateSession = provider.getGuard(options.guardName);
+                if (!validateSession) {
+                    return {
+                        status: 403,
+                        data: { error: `Guard "${String(options.guardName)}" is not registered` }
+                    };
+                }
+            }
+            if (validateSession) {
+                const result = await validateSession(session);
+                if (result !== true) {
+                    return {
+                        status: 403,
+                        data: {
+                            error: typeof result === 'string' ? result : options?.errorMessage || 'Unauthorized'
+                        }
+                    };
+                }
+            }
+            req.session = session;
+            return true;
         }
-        req.session = session;
-        return true;
+        catch (error) {
+            console.error('JWTGuard error:', error);
+            return {
+                status: 403,
+                data: { error: 'Unauthorized' }
+            };
+        }
     };
 }
 export function useSession(req) {
@@ -117,43 +126,52 @@ export function useSession(req) {
 }
 export function APIKeyGuard(options) {
     return async (req, _reply) => {
-        const apiKey = req.headers['x-api-key'] || req.headers.authorization;
-        if (!apiKey) {
-            return {
-                status: 403,
-                data: { error: 'X-API-Key header is missing' },
-            };
-        }
-        const session = await apiKeyProvider.verify(apiKey);
-        if (!session) {
-            return {
-                status: 403,
-                data: { error: 'Invalid API key' },
-            };
-        }
-        let validateSession = options?.validateSession;
-        if (options?.guardName) {
-            validateSession = provider.getGuard(options.guardName);
-            if (!validateSession) {
+        try {
+            const apiKey = req.headers['x-api-key'] || req.headers.authorization;
+            if (!apiKey) {
                 return {
                     status: 403,
-                    data: { error: `Guard "${String(options.guardName)}" is not registered` },
+                    data: { error: 'X-API-Key header is missing' },
                 };
             }
-        }
-        if (validateSession) {
-            const result = await validateSession(session);
-            if (result !== true) {
+            const session = await apiKeyProvider.verify(apiKey);
+            if (!session) {
                 return {
                     status: 403,
-                    data: {
-                        error: typeof result === 'string' ? result : options?.errorMessage || 'Unauthorized',
-                    },
+                    data: { error: 'Invalid API key' },
                 };
             }
+            let validateSession = options?.validateSession;
+            if (options?.guardName) {
+                validateSession = provider.getGuard(options.guardName);
+                if (!validateSession) {
+                    return {
+                        status: 403,
+                        data: { error: `Guard "${String(options.guardName)}" is not registered` },
+                    };
+                }
+            }
+            if (validateSession) {
+                const result = await validateSession(session);
+                if (result !== true) {
+                    return {
+                        status: 403,
+                        data: {
+                            error: typeof result === 'string' ? result : options?.errorMessage || 'Unauthorized',
+                        },
+                    };
+                }
+            }
+            req.session = session;
+            return true;
         }
-        req.session = session;
-        return true;
+        catch (error) {
+            console.error('API key validation error:', error);
+            return {
+                status: 403,
+                data: { error: 'Unauthorized' }
+            };
+        }
     };
 }
 export async function isBearerValid(req) {

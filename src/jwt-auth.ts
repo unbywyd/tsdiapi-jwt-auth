@@ -111,48 +111,56 @@ export function JWTGuard(
     options?: JWTGuardOptions<any>
 ): GuardFn<ForbiddenResponses, unknown> {
     return async (req: FastifyRequest, reply: FastifyReply) => {
-        const authHeader = req.headers.authorization;
-        if (!authHeader) {
-            return {
-                status: 403 as const,
-                data: { error: 'Authorization header is missing' }
-            } as ResponseUnion<ForbiddenResponses>;
-        }
-
-        const token = authHeader.split(/\s+/)[1];
-        const session = await provider.verify(token);
-
-        if (!session) {
-            return {
-                status: 403 as const,
-                data: { error: 'Invalid token' }
-            } as ResponseUnion<ForbiddenResponses>;
-        }
-
-        let validateSession: ValidateSessionFunction<any> | undefined = options?.validateSession;
-
-        if (options?.guardName) {
-            validateSession = provider.getGuard(options.guardName as keyof typeof provider.config.guards);
-            if (!validateSession) {
+        try {
+            const authHeader = req.headers.authorization;
+            if (!authHeader) {
                 return {
                     status: 403 as const,
-                    data: { error: `Guard "${String(options.guardName)}" is not registered` }
+                    data: { error: 'Authorization header is missing' }
                 } as ResponseUnion<ForbiddenResponses>;
             }
-        }
-        if (validateSession) {
-            const result = await validateSession(session);
-            if (result !== true) {
+
+            const token = authHeader.split(/\s+/)[1];
+            const session = await provider.verify(token);
+
+            if (!session) {
                 return {
                     status: 403 as const,
-                    data: {
-                        error: typeof result === 'string' ? result : options?.errorMessage || 'Unauthorized'
-                    }
+                    data: { error: 'Invalid token' }
                 } as ResponseUnion<ForbiddenResponses>;
             }
+
+            let validateSession: ValidateSessionFunction<any> | undefined = options?.validateSession;
+
+            if (options?.guardName) {
+                validateSession = provider.getGuard(options.guardName as keyof typeof provider.config.guards);
+                if (!validateSession) {
+                    return {
+                        status: 403 as const,
+                        data: { error: `Guard "${String(options.guardName)}" is not registered` }
+                    } as ResponseUnion<ForbiddenResponses>;
+                }
+            }
+            if (validateSession) {
+                const result = await validateSession(session);
+                if (result !== true) {
+                    return {
+                        status: 403 as const,
+                        data: {
+                            error: typeof result === 'string' ? result : options?.errorMessage || 'Unauthorized'
+                        }
+                    } as ResponseUnion<ForbiddenResponses>;
+                }
+            }
+            req.session = session;
+            return true;
+        } catch (error) {
+            console.error('JWTGuard error:', error);
+            return {
+                status: 403 as const,
+                data: { error: 'Unauthorized' }
+            } as ResponseUnion<ForbiddenResponses>;
         }
-        req.session = session;
-        return true;
     };
 }
 
@@ -164,49 +172,57 @@ export function APIKeyGuard(
     options?: JWTGuardOptions<any>
 ): GuardFn<ForbiddenResponses, unknown> {
     return async (req: FastifyRequest, _reply: FastifyReply) => {
-        const apiKey = req.headers['x-api-key'] || req.headers.authorization;
+        try {
+            const apiKey = req.headers['x-api-key'] || req.headers.authorization;
 
-        if (!apiKey) {
-            return {
-                status: 403,
-                data: { error: 'X-API-Key header is missing' },
-            } as ResponseUnion<ForbiddenResponses>;
-        }
-
-        const session = await apiKeyProvider.verify(apiKey as string);
-        if (!session) {
-            return {
-                status: 403,
-                data: { error: 'Invalid API key' },
-            } as ResponseUnion<ForbiddenResponses>;
-        }
-
-        let validateSession: ValidateSessionFunction<any> | undefined = options?.validateSession;
-
-        if (options?.guardName) {
-            validateSession = provider.getGuard(options.guardName as keyof typeof provider.config.guards);
-            if (!validateSession) {
+            if (!apiKey) {
                 return {
                     status: 403,
-                    data: { error: `Guard "${String(options.guardName)}" is not registered` },
+                    data: { error: 'X-API-Key header is missing' },
                 } as ResponseUnion<ForbiddenResponses>;
             }
-        }
 
-        if (validateSession) {
-            const result = await validateSession(session);
-            if (result !== true) {
+            const session = await apiKeyProvider.verify(apiKey as string);
+            if (!session) {
                 return {
                     status: 403,
-                    data: {
-                        error: typeof result === 'string' ? result : options?.errorMessage || 'Unauthorized',
-                    },
+                    data: { error: 'Invalid API key' },
                 } as ResponseUnion<ForbiddenResponses>;
             }
-        }
 
-        req.session = session;
-        return true;
+            let validateSession: ValidateSessionFunction<any> | undefined = options?.validateSession;
+
+            if (options?.guardName) {
+                validateSession = provider.getGuard(options.guardName as keyof typeof provider.config.guards);
+                if (!validateSession) {
+                    return {
+                        status: 403,
+                        data: { error: `Guard "${String(options.guardName)}" is not registered` },
+                    } as ResponseUnion<ForbiddenResponses>;
+                }
+            }
+
+            if (validateSession) {
+                const result = await validateSession(session);
+                if (result !== true) {
+                    return {
+                        status: 403,
+                        data: {
+                            error: typeof result === 'string' ? result : options?.errorMessage || 'Unauthorized',
+                        },
+                    } as ResponseUnion<ForbiddenResponses>;
+                }
+            }
+
+            req.session = session;
+            return true;
+        } catch (error) {
+            console.error('API key validation error:', error);
+            return {
+                status: 403,
+                data: { error: 'Unauthorized' }
+            } as ResponseUnion<ForbiddenResponses>;
+        }
     };
 }
 
