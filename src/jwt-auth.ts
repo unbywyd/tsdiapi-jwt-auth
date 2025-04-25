@@ -45,7 +45,6 @@ export class JWTAuthProvider<TGuards extends Record<string, ValidateSessionFunct
             const { payload } = await jwtVerify(token, new TextEncoder().encode(this.config.secretKey));
             return payload as T;
         } catch (e) {
-            console.error(e);
             return null;
         }
     }
@@ -155,7 +154,6 @@ export function JWTGuard(
             req.session = session;
             return true;
         } catch (error) {
-            console.error('JWTGuard error:', error);
             return {
                 status: 403 as const,
                 data: { error: 'Unauthorized' }
@@ -217,7 +215,6 @@ export function APIKeyGuard(
             req.session = session;
             return true;
         } catch (error) {
-            console.error('API key validation error:', error);
             return {
                 status: 403,
                 data: { error: 'Unauthorized' }
@@ -237,7 +234,6 @@ export async function isBearerValid<T>(req: FastifyRequest): Promise<false | T> 
         req.session = session;
         return session as T;
     } catch (error) {
-        console.error('JWT validation error:', error);
         return false;
     }
 }
@@ -251,7 +247,6 @@ export async function isApiKeyValid(req: FastifyRequest): Promise<false | unknow
         req.session = session;
         return session;
     } catch (error) {
-        console.error('API key validation error:', error);
         return false;
     }
 }

@@ -21,7 +21,6 @@ export class JWTAuthProvider {
             return payload;
         }
         catch (e) {
-            console.error(e);
             return null;
         }
     }
@@ -113,7 +112,6 @@ export function JWTGuard(options) {
             return true;
         }
         catch (error) {
-            console.error('JWTGuard error:', error);
             return {
                 status: 403,
                 data: { error: 'Unauthorized' }
@@ -166,7 +164,6 @@ export function APIKeyGuard(options) {
             return true;
         }
         catch (error) {
-            console.error('API key validation error:', error);
             return {
                 status: 403,
                 data: { error: 'Unauthorized' }
@@ -187,7 +184,6 @@ export async function isBearerValid(req) {
         return session;
     }
     catch (error) {
-        console.error('JWT validation error:', error);
         return false;
     }
 }
@@ -203,7 +199,6 @@ export async function isApiKeyValid(req) {
         return session;
     }
     catch (error) {
-        console.error('API key validation error:', error);
         return false;
     }
 }
