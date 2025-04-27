@@ -52,8 +52,8 @@
     },
     "registration": {
         "pluginImportName": "JwtAuthPlugin",
-        "pluginArgs": "{\"guards\":{\"admin\":\"async (session: { adminId: string }) => { if (!session.adminId) { return \\\"Only administrators are allowed!\\\"; } return true; }\"}}"
-    },
+        "pluginArgs": "{ guards: { admin: async (session: { adminId: string }) => { if (!session.adminId) { return 'Only administrators are allowed!'; } return true; } } }"
+      },
     "generators": [
         {
             "name": "feature",
@@ -119,3 +119,4 @@
         "🚀 JWT Authentication Plugin installed successfully!"
     ]
 }
+
