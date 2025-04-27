@@ -50,59 +50,14 @@
     "prisma": {
         "required": true
     },
+    "registration": {
+        "pluginImportName": "JwtAuthPlugin",
+        "pluginArgs": "{\"guards\":{\"admin\":\"async (session: { adminId: string }) => { if (!session.adminId) { return \\\"Only administrators are allowed!\\\"; } return true; }\"}}"
+    },
     "generators": [
         {
             "name": "feature",
-            "description": "Generate a auth feature",
-            "dependencies": [
-                "@tsdiapi/inforu",
-                "@tsdiapi/email"
-            ],
-            "files": [
-                {
-                    "source": "generators/feature/*.*",
-                    "destination": "{{name}}",
-                    "overwrite": false,
-                    "isHandlebarsTemplate": true
-                }
-            ],
-            "args": [
-                {
-                    "name": "userModelName",
-                    "description": "Prisma model name for users",
-                    "inquirer": {
-                        "type": "input",
-                        "message": "Enter the Prisma model name for users:",
-                        "default": "User"
-                    }
-                },
-                {
-                    "name": "sessionModelName",
-                    "description": "Prisma model name for sessions",
-                    "inquirer": {
-                        "type": "input",
-                        "message": "Enter the Prisma model name for sessions:",
-                        "default": "Session"
-                    }
-                }
-            ],
-            "prismaScripts": [
-                {
-                    "command": "ADD MODEL {{pascalCase userModelName}} ({id String  @id @default(cuid()) | email String? @unique | phoneNumber String? @unique });",
-                    "description": "Add User model to Prisma schema"
-                },
-                {
-                    "command": "ADD MODEL {{pascalCase sessionModelName}} ({id String  @id @default(cuid()) | email String? | phoneNumber String? | code String });",
-                    "description": "Add Session model to Prisma schema"
-                }
-            ],
-            "postMessages": [
-                "✅ Feature {{name}} created successfully!"
-            ]
-        },
-        {
-            "name": "feature_with_admin",
-            "description": "Generate a extended auth feature",
+            "description": "Generate a auth feature for the project",
             "dependencies": [
                 "@tsdiapi/crypto",
                 "@tsdiapi/inforu",
@@ -110,8 +65,9 @@
             ],
             "files": [
                 {
-                    "source": "generators/feature_with_admin/*.*",
-                    "destination": "{{name}}",
+                    "source": "generators/feature/*.*",
+                    "destination": "src/api/{{name}}",
+                    "isRoot": true,
                     "overwrite": false,
                     "isHandlebarsTemplate": true
                 }

@@ -1,174 +1,310 @@
-import { client } from '@tsdiapi/prisma';
-import { getContext } from '@tsdiapi/server';
+import { usePrisma } from '@tsdiapi/prisma';
 import { useEmailProvider } from '@tsdiapi/email';
-import { useJWTAuthProvider } from '@tsdiapi/jwt-auth';
+import { useJWTAuthProvider, isBearerValid } from '@tsdiapi/jwt-auth';
+import { CryptoService } from '@tsdiapi/crypto';
 import { Service } from "typedi";
-import { Type, Static } from '@sinclair/typebox';
+import { getContext, ResponseBadRequest } from '@tsdiapi/server';
 import { useInforuProvider } from '@tsdiapi/inforu';
+import { Type, Static } from '@sinclair/typebox';
+import { Admin, PrismaClient, Session } from '@generated/prisma/index.js';
+import { OutputAdminSchemaLite, OutputAdminSchemaType, Output{{pascalCase userModelName}}SchemaLite, Output{{pascalCase userModelName}}SchemaType } from '@base/api/typebox-schemas/models/index.js';
 
-export const ErrorResponseDTO = Type.Object({
-  error: Type.String(),
+export const Output{{pascalCase userModelName}}SchemaLiteWithoutPassword = Type.Omit(Output{{pascalCase userModelName}}SchemaLite, ["password"]);
+export const OutputAdminSchemaLiteWithoutPassword = Type.Omit(OutputAdminSchemaLite, ["password"]);
+
+export const InputAdminSignUpSchema = Type.Object({
+  email: Type.String({ format: 'email' }),
+  phoneNumber: Type.Optional(Type.String()),
+  name: Type.String(),
+  secret: Type.String(),
+  password: Type.String({ minLength: 6 })
 });
-export type ErrorResponseType = Static<typeof ErrorResponseDTO>;
+export type InputAdminSignUpSchemaType = Static<typeof InputAdminSignUpSchema>;
 
-// === DTOs ===
-export const SignInEmailDTO = Type.Object({
-  email: Type.String({ format: 'email' })
+export const InputAdminSignInSchema = Type.Object({
+  phoneNumber: Type.Optional(Type.String()),
+  email: Type.Optional(Type.String()),
+  password: Type.Optional(Type.String({ minLength: 6 }))
 });
-export type SignInEmailDTOType = Static<typeof SignInEmailDTO>;
+export type InputAdminSignInSchemaType = Static<typeof InputAdminSignInSchema>;
 
-export const OutputSignInEmailDTO = Type.Object({
-  email: Type.String(),
-  {{lowerCase sessionModelName}}Id: Type.String(),
+export const OutputAdminAuthSchema = Type.Object({
+  session: Type.Optional(Type.Object({
+    accessToken: Type.String(),
+    admin: OutputAdminSchemaLiteWithoutPassword
+  })),
+  otp: Type.Optional(Type.Object({
+    sessionId: Type.String()
+  }))
 });
-export type OutputSignInEmailDTOType = Static<typeof OutputSignInEmailDTO>;
+export type OutputAdminAuthSchemaType = Static<typeof OutputAdminAuthSchema>;
 
-export const SignInPhoneDTO = Type.Object({
-  phoneNumber: Type.String(),
+export const Input{{pascalCase userModelName}}SignInSchema = Type.Object({
+  email: Type.Optional(Type.String({ format: 'email' })),
+  phoneNumber: Type.Optional(Type.String()),
 });
-export type SignInPhoneDTOType = Static<typeof SignInPhoneDTO>;
+export type Input{{pascalCase userModelName}}SignInSchemaType = Static<typeof Input{{pascalCase userModelName}}SignInSchema>;
 
-export const OutputSignInPhoneDTO = Type.Object({
-  phoneNumber: Type.String(),
-  {{lowerCase sessionModelName}}Id: Type.String(),
+export const Output{{pascalCase userModelName}}SignInSchema = Type.Object({
+  email: Type.Optional(Type.String({ format: 'email' })),
+  phoneNumber: Type.Optional(Type.String()),
+  sessionId: Type.String()
 });
-export type OutputSignInPhoneDTOType = Static<typeof OutputSignInPhoneDTO>;
+export type Output{{pascalCase userModelName}}SignInSchemaType = Static<typeof Output{{pascalCase userModelName}}SignInSchema>;
 
-export const InputVerifyDTO = Type.Object({
+export const InputOtpVerifySchema = Type.Object({
   code: Type.String(),
-  {{lowerCase sessionModelName}}Id: Type.String(),
+  sessionId: Type.String()
 });
-export type InputVerifyDTOType = Static<typeof InputVerifyDTO>;
+export type InputOtpVerifySchemaType = Static<typeof InputOtpVerifySchema>;
 
-export const Output{{pascalCase userModelName}}DTO = Type.Object({
-  id: Type.String(),
-  email: Type.String(),
-  phoneNumber: Type.String(),
+export const Output{{pascalCase userModelName}}AuthSchema = Type.Object({
+  session: Type.Object({
+    accessToken: Type.String(),
+    user: Output{{pascalCase userModelName}}SchemaLiteWithoutPassword
+  })
 });
-export type Output{{pascalCase userModelName}}DTOType = Static<typeof Output{{pascalCase userModelName}}DTO>;
+export type Output{{pascalCase userModelName}}AuthSchemaType = Static<typeof Output{{pascalCase userModelName}}AuthSchema>;
 
-export const OutputVerifyDTO = Type.Object({
-  accessToken: Type.String(),
-  user: Output{{pascalCase userModelName}}DTO,
-});
-export type OutputVerifyDTOType = Static<typeof OutputVerifyDTO>;
-
-export type {{pascalCase userModelName}}Session = {
+export type AuthSession = {
   id: string;
-  email: string;
-  phoneNumber: string;
+  email?: string;
+  phoneNumber?: string;
+  adminId?: string;
 };
 
-function generateRandomSixDigits(): number {
-  return Math.floor(100000 + Math.random() * 900000);
+export const AdminGuard = async (req: any) => {
+  const session = await isBearerValid<AuthSession>(req);
+  if (!session) return false;
+  return !!session?.adminId;
+};
+
+export function generateRandomSixDigits(): number {
+  const array = new Uint32Array(1);
+  crypto.getRandomValues(array);
+  return 100000 + (array[0] % 900000);
 }
-const responseError = (message: string) => {
-  throw new Error(message);
-}
+
 @Service()
-export default class AuthService {
-  async verify(data: InputVerifyDTOType): Promise<OutputVerifyDTOType> {
-    const appContext = getContext();
-    try {
-      const session = await client.{{lowerCase sessionModelName}}.findUnique({
-        where: { id: data.{{lowerCase sessionModelName}}Id }
-      });
+export default class {{className}}Service {
+  client: PrismaClient;
+  constructor(public cryptoService: CryptoService) {
+    this.client = usePrisma<PrismaClient>();
+  }
 
-      const isDev = appContext.environment === 'development';
+  async adminVerify(data: InputOtpVerifySchemaType): Promise<OutputAdminAuthSchemaType> {
+    const { sessionId, code } = data;
+    const session = await this.client.{{lowerCase sessionModelName}}.findUnique({ where: { id: sessionId } });
+    if (!session) throw new ResponseBadRequest("Session not found");
+    if (session.code !== code) throw new ResponseBadRequest("Invalid code");
+    if (session.deletedAt) throw new ResponseBadRequest("Session expired");
+    if (!session.email) throw new ResponseBadRequest("Session is not for email");
+    const admin = await this.client.admin.findFirst({ where: { email: session.email } });
+    if (!admin) throw new ResponseBadRequest("Admin not found");
 
-      if (!isDev) {
-        if (!session) return responseError("Invalid session");
-        if (session.code !== data.code) return responseError("Invalid code");
-        if (session.deletedAt) return responseError("Session expired");
-      }
+    const accessToken = await useJWTAuthProvider().signIn<AuthSession>({
+      id: "",
+      phoneNumber: admin.phoneNumber,
+      email: admin.email,
+      adminId: admin.id
+    });
 
-      if (session) {
-        await client.{{lowerCase sessionModelName}}.update({
-          where: { id: session.id },
-          data: { deletedAt: new Date() },
-        });
-      }
-
-      const { email, phoneNumber } = session;
-      let user = await client.{{lowerCase userModelName}}.findFirst({
-        where: email ? { email } : { phoneNumber }
-      });
-
-      if (!user) {
-        user = await client.{{lowerCase userModelName}}.create({
-          data: { email, phoneNumber }
-        });
-      }
-
-      const authProvider = useJWTAuthProvider();
-      const accessToken = await authProvider.signIn<{{pascalCase userModelName}}Session>({
-        id: user.id,
-        email: user.email,
-        phoneNumber: user.phoneNumber,
-      });
-
-      return {
+    return {
+      session: {
         accessToken,
-        user: user
-      };
-
-    } catch (e) {
-      console.error(e);
-      return responseError(e.message);
+        admin
+      }
     }
   }
 
-  async signInByPhone(data: SignInPhoneDTOType): Promise<OutputSignInPhoneDTOType> {
+  async signInByAdmin(data: InputAdminSignInSchemaType): Promise<OutputAdminAuthSchemaType> {
     try {
-      const provider = useInforuProvider();
-      const code = generateRandomSixDigits();
+      if (!data.phoneNumber && !data.email) throw new ResponseBadRequest("Phone number or email is required");
+      let admin: Admin | null = null;
+      if (data.phoneNumber) {
+        admin = await this.client.admin.findFirst({
+          where: {
+            phoneNumber: {
+              equals: data.phoneNumber
+            }
+          }
+        });
+      }
+      if (data.email) {
+        admin = await this.client.admin.findFirst({
+          where: {
+            email: {
+              equals: data.email
+            }
+          }
+        });
+      }
+      if (!admin) throw new ResponseBadRequest("{{pascalCase userModelName}} not found");
 
-      const session = await client.{{lowerCase sessionModelName}}.create({
-        data: { code: code.toString(), phoneNumber: data.phoneNumber },
+      const password = data.password;
+      if (!password) {
+        const email = data.email;
+        if (!email) throw new ResponseBadRequest("Email is required for OTP");
+        const otp = generateRandomSixDigits();
+        const session = await this.client.{{lowerCase sessionModelName}}.create({
+          data: { code: otp.toString(), email }
+        });
+
+        const emailProvider = useEmailProvider();
+        await emailProvider.sendEmail(email, "Your OTP Code", `Your code is ${otp}`);
+        return {
+          otp: { sessionId: session.id }
+        }
+      }
+      const passwordIsValid = this.cryptoService.verifyPassword(data.password, admin.password);
+      if (!passwordIsValid) throw new ResponseBadRequest("Invalid password");
+      const accessToken = await useJWTAuthProvider().signIn<AuthSession>({
+        id: null,
+        phoneNumber: admin.phoneNumber,
+        email: admin.email,
+        adminId: admin.id
       });
 
-      provider.send(data.phoneNumber, `Your code is ${code}`).catch(console.error);
+      return {
+        session: {
+          accessToken,
+          admin
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      throw new ResponseBadRequest(e.message);
+    }
+  }
+
+  async signUpAdmin(data: InputAdminSignUpSchemaType): Promise<OutputAdminAuthSchemaType> {
+    try {
+      const appContext = getContext();
+      const secret = appContext.projectConfig.get("JWT_ADMIN_SECRET");
+      if (data.secret !== secret) throw new ResponseBadRequest("Invalid secret");
+
+      const adminExists = await this.client.admin.findUnique({ where: { phoneNumber: data.phoneNumber } });
+      if (adminExists) throw new ResponseBadRequest("{{pascalCase userModelName}} already exists");
+
+      const password = await this.cryptoService.hashPassword(data.password);
+      const newAdmin = await this.client.admin.create({
+        data: {
+          email: data.email,
+          name: data.name,
+          password,
+          phoneNumber: data.phoneNumber
+        }
+      });
+
+      const accessToken = await useJWTAuthProvider().signIn<AuthSession>({
+        id: null,
+        phoneNumber: newAdmin.phoneNumber,
+        adminId: newAdmin.id
+      });
+
+      return {
+        session: {
+          accessToken,
+          admin: newAdmin
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      throw new ResponseBadRequest(e.message);
+    }
+  }
+
+  async signIn(data: Input{{pascalCase userModelName}}SignInSchemaType): Promise<Output{{pascalCase userModelName}}SignInSchemaType> {
+    try {
+      const code = generateRandomSixDigits();
+      if (!data.phoneNumber && !data.email) throw new ResponseBadRequest("Phone number or email is required");
+
+      let session: Session | null = null;
+      if (data.phoneNumber) {
+        const provider = useInforuProvider();
+
+        session = await this.client.{{lowerCase sessionModelName}}.create({
+          data: { code: code.toString(), phoneNumber: data.phoneNumber }
+        });
+        await provider.send(data.phoneNumber, `Your code is ${code}`);
+      }
+
+      if (data.email) {
+        const emailProvider = useEmailProvider();
+
+        session = await this.client.{{lowerCase sessionModelName}}.create({
+          data: { code: code.toString(), email: data.email }
+        });
+        await emailProvider.sendEmail(data.email, `Your OTP Code`, `Your code is ${code}`);
+      }
 
       return {
         phoneNumber: data.phoneNumber,
-        {{lowerCase sessionModelName}}Id: session.id,
+        email: data.email,
+        sessionId: session.id
       };
-
     } catch (e) {
       console.error(e);
-      return responseError(e.message);
+      throw new ResponseBadRequest(e.message);
     }
   }
-  
-  async getCurrentUser(session: {{pascalCase userModelName}}Session): Promise<Output{{pascalCase userModelName}}DTOType> {
-    const user = await client.{{lowerCase userModelName}}.findUnique({
+
+  async getCurrentAdmin(session: AuthSession): Promise<OutputAdminSchemaType> {
+    if (!session.adminId) throw new ResponseBadRequest("Admin not found");
+    const admin = await this.client.admin.findUnique({ where: { id: session.adminId } });
+    if (!admin) throw new ResponseBadRequest("Admin not found");
+    return admin;
+  }
+
+  async getCurrent{{pascalCase userModelName}}(session: AuthSession): Promise<Output{{pascalCase userModelName}}SchemaType> {
+    if (!session.id) throw new ResponseBadRequest("{{pascalCase userModelName}} not found");
+    const user = await this.client.{{lowerCase userModelName}}.findUnique({
       where: { id: session.id }
     });
-
-    if (!user) return responseError("{{pascalCase userModelName}} not found");
-
+    if (!user) throw new ResponseBadRequest("{{pascalCase userModelName}} not found");
     return user;
   }
 
-  async signInByEmail(data: SignInEmailDTOType): Promise<OutputSignInEmailDTOType> {
+  async verify(data: InputOtpVerifySchemaType): Promise<Output{{pascalCase userModelName}}AuthSchemaType> {
     try {
-      const provider = useEmailProvider();
-      const code = generateRandomSixDigits();
-
-      const session = await client.{{lowerCase sessionModelName}}.create({
-        data: { code: code.toString(), email: data.email },
+      const appContext = getContext();
+      const isDev = appContext.environment === 'development';
+      const session = await this.client.{{lowerCase sessionModelName}}.findUnique({ where: { id: data.sessionId } });
+      if (!isDev) {
+        if (!session || session.code !== data.code || session.deletedAt) {
+          throw new ResponseBadRequest("Invalid or expired code");
+        }
+      } else if (!session) {
+        throw new ResponseBadRequest("Session not found");
+      }
+      await this.client.{{lowerCase sessionModelName}}.update({
+        where: { id: session.id },
+        data: { deletedAt: new Date() }
+      });
+      const { email, phoneNumber } = session;
+      let user = await this.client.{{lowerCase userModelName}}.findFirst({
+        where: email
+          ? { email: { equals: email } }
+          : { phoneNumber: { equals: phoneNumber } }
+      });
+      if (!user) {
+        user = await this.client.{{lowerCase userModelName}}.create({ data: { email, phoneNumber } });
+      }
+      const accessToken = await useJWTAuthProvider().signIn<AuthSession>({
+        id: user.id,
+        email: user.email,
+        phoneNumber: user.phoneNumber
       });
 
-      provider.sendEmail(data.email, "Your code", `Your code is ${code}`).catch(console.error);
-
       return {
-        email: data.email,
-        {{lowerCase sessionModelName}}Id: session.id,
+        session: {
+          accessToken,
+          user
+        }
       };
-
     } catch (e) {
       console.error(e);
-      return responseError(e.message);
+      throw new ResponseBadRequest(e.message);
     }
   }
 }
