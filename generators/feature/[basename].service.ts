@@ -187,22 +187,24 @@ export default class {{className}}Service {
       const secret = appContext.projectConfig.get("JWT_ADMIN_SECRET");
       if (data.secret !== secret) throw new ResponseBadRequest("Invalid secret");
 
-      const adminExists = await this.client.admin.findUnique({ where: { phoneNumber: data.phoneNumber } });
+      const where = data?.phoneNumber ? { phoneNumber: data.phoneNumber } : { email: data.email };
+      const adminExists = await this.client.admin.findUnique({ where });
       if (adminExists) throw new ResponseBadRequest("{{pascalCase userModelName}} already exists");
 
       const password = await this.cryptoService.hashPassword(data.password);
       const newAdmin = await this.client.admin.create({
         data: {
-          email: data.email,
+          email: data.email || null,
           name: data.name,
           password,
-          phoneNumber: data.phoneNumber
+          phoneNumber: data.phoneNumber || null
         }
       });
 
       const accessToken = await useJWTAuthProvider().signIn<AuthSession>({
         id: null,
-        phoneNumber: newAdmin.phoneNumber,
+        phoneNumber: newAdmin.phoneNumber || null,
+        email: newAdmin.email || null,
         adminId: newAdmin.id
       });
 
