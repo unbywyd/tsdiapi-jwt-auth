@@ -53,7 +53,7 @@
     "registration": {
         "pluginImportName": "JwtAuthPlugin",
         "pluginArgs": "{ guards: { admin: async (session: { adminId: string }) => { if (!session.adminId) { return 'Only administrators are allowed!'; } return true; } } }"
-      },
+    },
     "generators": [
         {
             "name": "feature",
@@ -104,10 +104,6 @@
                 {
                     "command": "ADD MODEL Admin ({id String  @id @default(cuid()) | email String? @unique | phoneNumber String @unique | password String | name String? });",
                     "description": "Add Admin model to Prisma schema"
-                },
-                {
-                    "command": "ADD RELATION Admin AND {{pascalCase userModelName}} (fkHolder={{pascalCase userModelName}}, type=1:M);",
-                    "description": "Add relation between Admin and User models"
                 }
             ],
             "postMessages": [
@@ -119,4 +115,3 @@
         "🚀 JWT Authentication Plugin installed successfully!"
     ]
 }
-
