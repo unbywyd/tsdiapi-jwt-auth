@@ -3,10 +3,11 @@ import { useEmailProvider } from '@tsdiapi/email';
 import { useJWTAuthProvider, isBearerValid } from '@tsdiapi/jwt-auth';
 import { CryptoService } from '@tsdiapi/crypto';
 import { Service } from "typedi";
-import { getContext, ResponseBadRequest } from '@tsdiapi/server';
+import { getContext, ResponseBadRequest, ResponseError} from '@tsdiapi/server';
 import { useInforuProvider } from '@tsdiapi/inforu';
 import { Type, Static } from '@sinclair/typebox';
 import { Admin, PrismaClient, Session } from '@generated/prisma/index.js';
+
 import { OutputAdminSchemaLite, OutputAdminSchemaType, Output{{pascalCase userModelName}}SchemaLite, Output{{pascalCase userModelName}}SchemaType } from '@base/api/typebox-schemas/models/index.js';
 
 export const Output{{pascalCase userModelName}}SchemaLiteWithoutPassword = Type.Omit(Output{{pascalCase userModelName}}SchemaLite, ["password"]);
@@ -172,6 +173,9 @@ export default class {{className}}Service {
         }
       }
     } catch (e) {
+      if (e instanceof ResponseError) {
+        throw e;
+      }
       console.error(e);
       throw new ResponseBadRequest(e.message);
     }
@@ -209,6 +213,9 @@ export default class {{className}}Service {
         }
       }
     } catch (e) {
+      if (e instanceof ResponseError) {
+        throw e;
+      }
       console.error(e);
       throw new ResponseBadRequest(e.message);
     }
@@ -244,6 +251,9 @@ export default class {{className}}Service {
         sessionId: session.id
       };
     } catch (e) {
+      if (e instanceof ResponseError) {
+        throw e;
+      }
       console.error(e);
       throw new ResponseBadRequest(e.message);
     }
@@ -303,6 +313,9 @@ export default class {{className}}Service {
         }
       };
     } catch (e) {
+      if (e instanceof ResponseError) {
+        throw e;
+      }
       console.error(e);
       throw new ResponseBadRequest(e.message);
     }
