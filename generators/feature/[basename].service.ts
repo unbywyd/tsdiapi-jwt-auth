@@ -191,12 +191,11 @@ export default class {{className}}Service {
       const adminExists = await this.client.admin.findUnique({ where });
       if (adminExists) throw new ResponseBadRequest("{{pascalCase userModelName}} already exists");
 
-      const password = await this.cryptoService.hashPassword(data.password);
       const newAdmin = await this.client.admin.create({
         data: {
           email: data.email || null,
           name: data.name,
-          password,
+          password: data.password,
           phoneNumber: data.phoneNumber || null
         }
       });
