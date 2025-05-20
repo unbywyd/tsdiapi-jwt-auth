@@ -102,7 +102,7 @@
                     "description": "Add Session model to Prisma schema"
                 },
                 {
-                    "command": "ADD MODEL Admin ({id String  @id @default(cuid()) | email String? @unique | phoneNumber String @unique | password String | name String? });",
+                    "command": "ADD MODEL Admin ({id String  @id @default(cuid()) | email String? @unique | phoneNumber String? @unique | password String | name String? });",
                     "description": "Add Admin model to Prisma schema"
                 }
             ],
