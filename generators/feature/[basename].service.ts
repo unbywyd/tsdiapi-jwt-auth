@@ -8,7 +8,7 @@ import { useInforuProvider } from '@tsdiapi/inforu';
 import { Type, Static } from '@sinclair/typebox';
 import { Admin, PrismaClient, Session } from '@generated/prisma/index.js';
 
-import { OutputAdminSchemaLite, OutputAdminSchemaType, Output{{pascalCase userModelName}}SchemaLite, Output{{pascalCase userModelName}}SchemaType } from '@base/api/typebox-schemas/models/index.js';
+import { OutputAdminSchemaLite, OutputAdminSchemaType, Output{{pascalCase userModelName}}SchemaLite, Output{{pascalCase userModelName}}SchemaType } from '@generated/typebox-schemas/models/index.js';
 
 export const Output{{pascalCase userModelName}}SchemaLiteWithoutPassword = Type.Omit(Output{{pascalCase userModelName}}SchemaLite, ["password"]);
 export const OutputAdminSchemaLiteWithoutPassword = Type.Omit(OutputAdminSchemaLite, ["password"]);
