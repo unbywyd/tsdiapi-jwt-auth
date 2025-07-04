@@ -7,10 +7,11 @@ import { GuardFn, ResponseUnion } from '@tsdiapi/server';
 export type ValidateSessionFunction<T> = (session: T) => Promise<boolean | string> | (boolean | string);
 
 export type JWTGuardOptions<TGuards extends Record<string, ValidateSessionFunction<any>>> = {
-    guardName?: keyof TGuards; // Имя зарегистрированного гуарда
-    validateSession?: ValidateSessionFunction<Record<string, any>>; // Ручной валидатор
+    guardName?: keyof TGuards;
+    validateSession?: ValidateSessionFunction<Record<string, any>>;
     errorMessage?: string;
     guardDescription?: string;
+    optional?: boolean;
 };
 
 
@@ -113,6 +114,9 @@ export function JWTGuard(
         try {
             const authHeader = req.headers.authorization;
             if (!authHeader) {
+                if (options?.optional) {
+                    return true;
+                }
                 return {
                     status: 403 as const,
                     data: { error: 'Authorization header is missing' }
@@ -123,6 +127,9 @@ export function JWTGuard(
             const session = await provider.verify(token);
 
             if (!session) {
+                if (options?.optional) {
+                    return true;
+                }
                 return {
                     status: 403 as const,
                     data: { error: 'Invalid token' }
@@ -134,6 +141,9 @@ export function JWTGuard(
             if (options?.guardName) {
                 validateSession = provider.getGuard(options.guardName as keyof typeof provider.config.guards);
                 if (!validateSession) {
+                    if (options?.optional) {
+                        return true;
+                    }
                     return {
                         status: 403 as const,
                         data: { error: `Guard "${String(options.guardName)}" is not registered` }
@@ -143,6 +153,9 @@ export function JWTGuard(
             if (validateSession) {
                 const result = await validateSession(session);
                 if (result !== true) {
+                    if (options?.optional) {
+                        return true;
+                    }
                     return {
                         status: 403 as const,
                         data: {
@@ -154,6 +167,9 @@ export function JWTGuard(
             req.session = session;
             return true;
         } catch (error) {
+            if (options?.optional) {
+                return true;
+            }
             return {
                 status: 403 as const,
                 data: { error: 'Unauthorized' }
@@ -174,6 +190,9 @@ export function APIKeyGuard(
             const apiKey = req.headers['x-api-key'] || req.headers.authorization;
 
             if (!apiKey) {
+                if (options?.optional) {
+                    return true;
+                }
                 return {
                     status: 403,
                     data: { error: 'X-API-Key header is missing' },
@@ -182,6 +201,9 @@ export function APIKeyGuard(
 
             const session = await apiKeyProvider.verify(apiKey as string);
             if (!session) {
+                if (options?.optional) {
+                    return true;
+                }
                 return {
                     status: 403,
                     data: { error: 'Invalid API key' },
@@ -193,6 +215,9 @@ export function APIKeyGuard(
             if (options?.guardName) {
                 validateSession = provider.getGuard(options.guardName as keyof typeof provider.config.guards);
                 if (!validateSession) {
+                    if (options?.optional) {
+                        return true;
+                    }
                     return {
                         status: 403,
                         data: { error: `Guard "${String(options.guardName)}" is not registered` },
@@ -203,6 +228,9 @@ export function APIKeyGuard(
             if (validateSession) {
                 const result = await validateSession(session);
                 if (result !== true) {
+                    if (options?.optional) {
+                        return true;
+                    }
                     return {
                         status: 403,
                         data: {
@@ -215,6 +243,9 @@ export function APIKeyGuard(
             req.session = session;
             return true;
         } catch (error) {
+            if (options?.optional) {
+                return true;
+            }
             return {
                 status: 403,
                 data: { error: 'Unauthorized' }
@@ -250,3 +281,4 @@ export async function isApiKeyValid(req: FastifyRequest): Promise<false | unknow
         return false;
     }
 }
+

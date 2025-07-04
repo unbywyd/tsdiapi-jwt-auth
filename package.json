@@ -1,7 +1,7 @@
 {
   "name": "@tsdiapi/jwt-auth",
   "description": "JWT authentication plugin for TSDIAPI-Server, providing easy-to-use guards, token generation, and session validation.",
-  "version": "0.2.19",
+  "version": "0.2.20",
   "type": "module",
   "keywords": [
     "tsdiapi",

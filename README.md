@@ -5,16 +5,13 @@
 
 **TSDIAPI-JWT-Auth** is a plugin for the `TSDIAPI-Server` framework that simplifies JWT-based authentication and authorization. It includes utilities for token creation, session validation, and custom guards to secure API endpoints effectively.
 
----
-
 ## Features
 
 - **Token Management**: Generate and verify JWT tokens with customizable payloads and expiration times.
 - **Session Protection**: Use built-in or custom session validation logic for secure API access.
 - **Custom Guards**: Easily register and reference multiple guards to support various security requirements.
 - **Environment Integration**: Supports configuration through `.env` files to streamline deployment.
-
----
+- **Optional Guards**: Load session without blocking requests when authentication fails.
 
 ## Installation
 
@@ -27,8 +24,6 @@ Or use the CLI to add the plugin:
 ```bash
 tsdiapi plugins add jwt-auth
 ```
-
----
 
 ## Usage
 
@@ -45,6 +40,17 @@ createApp({
     createPlugin({
       secretKey: "your-secret-key", // Use JWT_SECRET_KEY in .env as an alternative
       expirationTime: 60 * 60 * 24 * 7, // Token valid for 7 days, override with JWT_EXPIRATION_TIME in .env
+      guards: {
+        admin: (session) => session.role === 'admin',
+        user: (session) => session.role === 'user'
+      },
+      apiKeys: {
+        'api-key-1': true,
+        'api-key-2': {
+          description: 'Admin API key',
+          validate: () => true
+        }
+      }
     }),
   ],
 });
@@ -59,8 +65,6 @@ JWT_SECRET_KEY=your-secret-key
 JWT_EXPIRATION_TIME=604800
 ```
 
----
-
 ## Protecting Endpoints
 
 **Important Rules for Route Definition:**
@@ -74,7 +78,11 @@ JWT_EXPIRATION_TIME=604800
 3. Authentication (`auth()`) and guards (`guard()`) should be defined after response codes
 4. The handler should be defined last
 
-### Applying the `JWTGuard`
+### Required Guards
+
+These guards will block requests if authentication fails:
+
+#### Applying the `JWTGuard`
 
 Secure API endpoints using `JWTGuard`. You can use it in two ways:
 
@@ -120,7 +128,148 @@ useRoute()
   .build();
 ```
 
-**Note:** Make sure you have registered the guard with the same name (`adminOnly` in this example) during plugin initialization when using custom guards.
+#### Applying the `APIKeyGuard`
+
+```typescript
+useRoute()
+  .get('/api/protected')
+  .code(200, Type.Object({
+      message: Type.String(),
+  }))
+  .code(403, Type.Object({
+      error: Type.String(),
+  }))
+  .guard(APIKeyGuard())
+  .handler(async (req) => {
+    return {
+      status: 200,
+      data: { message: 'API access granted' }
+    }
+  })
+  .build();
+```
+
+### Optional Guards
+
+These guards load session if authentication is valid, but don't block requests if it fails. Use the `optional: true` option:
+
+#### Applying the `JWTGuard` in Optional Mode
+
+```typescript
+useRoute()
+  .get('/optional-auth')
+  .code(200, Type.Object({
+      message: Type.String(),
+      isAuthenticated: Type.Optional(Type.Boolean()),
+      user: Type.Optional(Type.Object({
+          userId: Type.String(),
+          role: Type.String()
+      }))
+  }))
+  .guard(JWTGuard({ optional: true }))
+  .handler(async (req) => {
+    const session = useSession(req);
+    if (session) {
+      return {
+        status: 200,
+        data: { 
+          message: 'Authenticated user', 
+          user: session,
+          isAuthenticated: true 
+        }
+      };
+    } else {
+      return {
+        status: 200,
+        data: { 
+          message: 'Guest user',
+          isAuthenticated: false 
+        }
+      };
+    }
+  })
+  .build();
+```
+
+#### Applying the `APIKeyGuard` in Optional Mode
+
+```typescript
+useRoute()
+  .get('/api/optional')
+  .code(200, Type.Object({
+      message: Type.String(),
+      isApiAuthenticated: Type.Optional(Type.Boolean()),
+      key: Type.Optional(Type.Any())
+  }))
+  .guard(APIKeyGuard({ optional: true }))
+  .handler(async (req) => {
+    const session = useSession(req);
+    if (session) {
+      return {
+        status: 200,
+        data: { 
+          message: 'Authenticated API call', 
+          key: session,
+          isApiAuthenticated: true 
+        }
+      };
+    } else {
+      return {
+        status: 200,
+        data: { 
+          message: 'Unauthenticated API call',
+          isApiAuthenticated: false 
+        }
+      };
+    }
+  })
+  .build();
+```
+
+#### Optional Guard with Custom Validation
+
+```typescript
+useRoute()
+  .get('/premium-content')
+  .code(200, Type.Object({
+      message: Type.String(),
+      accessLevel: Type.String()
+  }))
+  .guard(JWTGuard({ 
+    optional: true,
+    validateSession: (session) => session.subscription === 'premium',
+    guardDescription: 'Optional premium validation'
+  }))
+  .handler(async (req) => {
+    const session = useSession(req);
+    if (session && session.subscription === 'premium') {
+      return {
+        status: 200,
+        data: { 
+          message: 'Premium content', 
+          accessLevel: 'premium' 
+        }
+      };
+    } else if (session) {
+      return {
+        status: 200,
+        data: { 
+          message: 'Basic content', 
+          accessLevel: 'basic' 
+        }
+      };
+    } else {
+      return {
+        status: 200,
+        data: { 
+          message: 'Guest content',
+          accessLevel: 'guest' 
+        }
+      };
+    }
+  })
+  .build();
+```
 
 ### Registering Custom Guards
 
@@ -285,7 +434,12 @@ if (session) {
 
 ---
 
-## API Reference
+## Configuration
+
+### Environment Variables
+
+- `JWT_SECRET_KEY` - Secret key for JWT signing (default: 'secret-key-for-jwt')
+- `JWT_EXPIRATION_TIME` - Token expiration time in seconds (default: 604800 - 7 days)
 
 ### Plugin Options
 
@@ -294,6 +448,30 @@ if (session) {
 | `secretKey`      | `string`                                  | Secret key for signing JWT tokens.     |
 | `expirationTime` | `number`                                  | Token expiration time in seconds.      |
 | `guards`         | `Record<string, ValidateSessionFunction>` | Custom guards for validating sessions. |
+| `apiKeys`        | `Record<string, APIKeyEntry \| 'JWT' \| true>` | API keys configuration.                |
+
+---
+
+## API Reference
+
+### Guards
+
+- `JWTGuard(options?)` - JWT authentication (use `optional: true` for optional mode)
+- `APIKeyGuard(options?)` - API key authentication (use `optional: true` for optional mode)
+
+### Helper Functions
+
+- `useSession<T>(req)` - Get current session
+- `useJWTAuthProvider()` - Get JWT provider instance
+- `useApiKeyProvider()` - Get API key provider instance
+- `isBearerValid<T>(req)` - Check if Bearer token is valid
+- `isApiKeyValid(req)` - Check if API key is valid
+
+### Types
+
+- `ValidateSessionFunction<T>` - Session validation function type
+- `JWTGuardOptions<TGuards>` - Guard configuration options
+- `PluginOptions<TGuards>` - Plugin configuration options
 
 ---
 
