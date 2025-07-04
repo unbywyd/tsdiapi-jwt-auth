@@ -7,6 +7,7 @@ export type JWTGuardOptions<TGuards extends Record<string, ValidateSessionFuncti
     validateSession?: ValidateSessionFunction<Record<string, any>>;
     errorMessage?: string;
     guardDescription?: string;
+    optional?: boolean;
 };
 export interface AuthProvider<TGuards extends Record<string, ValidateSessionFunction<any>>> {
     init(config: PluginOptions<TGuards>): void;

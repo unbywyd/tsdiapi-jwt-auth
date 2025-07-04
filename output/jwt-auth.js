@@ -74,6 +74,9 @@ export function JWTGuard(options) {
         try {
             const authHeader = req.headers.authorization;
             if (!authHeader) {
+                if (options?.optional) {
+                    return true;
+                }
                 return {
                     status: 403,
                     data: { error: 'Authorization header is missing' }
@@ -82,6 +85,9 @@ export function JWTGuard(options) {
             const token = authHeader.split(/\s+/)[1];
             const session = await provider.verify(token);
             if (!session) {
+                if (options?.optional) {
+                    return true;
+                }
                 return {
                     status: 403,
                     data: { error: 'Invalid token' }
@@ -91,6 +97,9 @@ export function JWTGuard(options) {
             if (options?.guardName) {
                 validateSession = provider.getGuard(options.guardName);
                 if (!validateSession) {
+                    if (options?.optional) {
+                        return true;
+                    }
                     return {
                         status: 403,
                         data: { error: `Guard "${String(options.guardName)}" is not registered` }
@@ -100,6 +109,9 @@ export function JWTGuard(options) {
             if (validateSession) {
                 const result = await validateSession(session);
                 if (result !== true) {
+                    if (options?.optional) {
+                        return true;
+                    }
                     return {
                         status: 403,
                         data: {
@@ -112,6 +124,9 @@ export function JWTGuard(options) {
             return true;
         }
         catch (error) {
+            if (options?.optional) {
+                return true;
+            }
             return {
                 status: 403,
                 data: { error: 'Unauthorized' }
@@ -127,6 +142,9 @@ export function APIKeyGuard(options) {
         try {
             const apiKey = req.headers['x-api-key'] || req.headers.authorization;
             if (!apiKey) {
+                if (options?.optional) {
+                    return true;
+                }
                 return {
                     status: 403,
                     data: { error: 'X-API-Key header is missing' },
@@ -134,6 +152,9 @@ export function APIKeyGuard(options) {
             }
             const session = await apiKeyProvider.verify(apiKey);
             if (!session) {
+                if (options?.optional) {
+                    return true;
+                }
                 return {
                     status: 403,
                     data: { error: 'Invalid API key' },
@@ -143,6 +164,9 @@ export function APIKeyGuard(options) {
             if (options?.guardName) {
                 validateSession = provider.getGuard(options.guardName);
                 if (!validateSession) {
+                    if (options?.optional) {
+                        return true;
+                    }
                     return {
                         status: 403,
                         data: { error: `Guard "${String(options.guardName)}" is not registered` },
@@ -152,6 +176,9 @@ export function APIKeyGuard(options) {
             if (validateSession) {
                 const result = await validateSession(session);
                 if (result !== true) {
+                    if (options?.optional) {
+                        return true;
+                    }
                     return {
                         status: 403,
                         data: {
@@ -164,6 +191,9 @@ export function APIKeyGuard(options) {
             return true;
         }
         catch (error) {
+            if (options?.optional) {
+                return true;
+            }
             return {
                 status: 403,
                 data: { error: 'Unauthorized' }
