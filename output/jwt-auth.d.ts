@@ -14,10 +14,22 @@ export type TokenPair = {
     accessToken: string;
     refreshToken: string;
 };
+export type TokenWithExpiry = {
+    token: string;
+    expiresAt: Date;
+};
+export type TokenPairWithExpiry = {
+    accessToken: string;
+    refreshToken: string;
+    accessTokenExpiresAt: Date;
+    refreshTokenExpiresAt: Date;
+};
 export interface AuthProvider<TGuards extends Record<string, ValidateSessionFunction<any>>> {
     init(config: PluginOptions<TGuards>): void;
     signIn<T extends Record<string, any>>(payload: T): Promise<string>;
+    signInWithExpiry<T extends Record<string, any>>(payload: T): Promise<TokenWithExpiry>;
     signInWithRefresh<T extends Record<string, any>>(payload: T): Promise<TokenPair>;
+    signInWithRefreshAndExpiry<T extends Record<string, any>>(payload: T): Promise<TokenPairWithExpiry>;
     verify<T>(token: string): Promise<T | null>;
     verifyRefresh<T>(token: string): Promise<T | null>;
     validateTokens<T>(accessToken: string, refreshToken: string, validateFn?: ValidateTokenPairFunction<T>): Promise<T | null>;
@@ -27,7 +39,9 @@ export declare class JWTAuthProvider<TGuards extends Record<string, ValidateSess
     config: PluginOptions<TGuards> | null;
     init(config: PluginOptions<TGuards>): void;
     signIn<T extends Record<string, any>>(payload: T): Promise<string>;
+    signInWithExpiry<T extends Record<string, any>>(payload: T): Promise<TokenWithExpiry>;
     signInWithRefresh<T extends Record<string, any>>(payload: T): Promise<TokenPair>;
+    signInWithRefreshAndExpiry<T extends Record<string, any>>(payload: T): Promise<TokenPairWithExpiry>;
     verify<T>(token: string): Promise<T>;
     verifyRefresh<T>(token: string): Promise<T>;
     validateTokens<T>(accessToken: string, refreshToken: string, validateFn?: ValidateTokenPairFunction<T>): Promise<T | null>;
@@ -57,5 +71,5 @@ export declare function isBearerValid<T>(req: FastifyRequest): Promise<false | T
 export declare function isApiKeyValid(req: FastifyRequest): Promise<false | unknown>;
 export declare function isRefreshTokenValid<T>(req: FastifyRequest): Promise<false | T>;
 export declare function validateTokenPair<T>(accessToken: string, refreshToken: string, validateFn?: ValidateTokenPairFunction<T>): Promise<T | null>;
-export declare function refreshAccessToken<T>(accessToken: string, refreshToken: string, validateFn?: ValidateTokenPairFunction<T>): Promise<string | null>;
+export declare function refreshAccessToken<T>(accessToken: string, refreshToken: string, validateFn?: ValidateTokenPairFunction<T>): Promise<TokenPairWithExpiry | null>;
 //# sourceMappingURL=jwt-auth.d.ts.map

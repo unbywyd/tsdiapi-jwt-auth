@@ -15,6 +15,20 @@ export class JWTAuthProvider {
             .setNotBefore(iat)
             .sign(new TextEncoder().encode(this.config.secretKey));
     }
+    async signInWithExpiry(payload) {
+        const iat = Math.floor(Date.now() / 1000);
+        const exp = iat + this.config.expirationTime;
+        const token = await new SignJWT({ ...payload })
+            .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
+            .setExpirationTime(exp)
+            .setIssuedAt(iat)
+            .setNotBefore(iat)
+            .sign(new TextEncoder().encode(this.config.secretKey));
+        return {
+            token,
+            expiresAt: new Date(exp * 1000)
+        };
+    }
     async signInWithRefresh(payload) {
         const iat = Math.floor(Date.now() / 1000);
         const accessExp = iat + this.config.expirationTime;
@@ -34,6 +48,29 @@ export class JWTAuthProvider {
         return {
             accessToken,
             refreshToken
+        };
+    }
+    async signInWithRefreshAndExpiry(payload) {
+        const iat = Math.floor(Date.now() / 1000);
+        const accessExp = iat + this.config.expirationTime;
+        const refreshExp = iat + this.config.refreshExpirationTime;
+        const accessToken = await new SignJWT({ ...payload })
+            .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
+            .setExpirationTime(accessExp)
+            .setIssuedAt(iat)
+            .setNotBefore(iat)
+            .sign(new TextEncoder().encode(this.config.secretKey));
+        const refreshToken = await new SignJWT({ ...payload })
+            .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
+            .setExpirationTime(refreshExp)
+            .setIssuedAt(iat)
+            .setNotBefore(iat)
+            .sign(new TextEncoder().encode(this.config.refreshSecretKey));
+        return {
+            accessToken,
+            refreshToken,
+            accessTokenExpiresAt: new Date(accessExp * 1000),
+            refreshTokenExpiresAt: new Date(refreshExp * 1000)
         };
     }
     async verify(token) {
@@ -307,7 +344,7 @@ export async function refreshAccessToken(accessToken, refreshToken, validateFn) 
         if (!isValid) {
             return null;
         }
-        return await provider.signIn(isValid);
+        return await provider.signInWithRefreshAndExpiry(isValid);
     }
     catch (error) {
         return null;

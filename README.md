@@ -421,6 +421,22 @@ const token = await authProvider.signIn({
 console.log("Generated Token:", token);
 ```
 
+### `signInWithExpiry(payload: Record<string, any>): Promise<TokenWithExpiry>`
+
+Generates a JWT token with expiration date for the given user payload.
+
+#### Example:
+```typescript
+const authProvider = useJWTAuthProvider();
+
+const result = await authProvider.signInWithExpiry({
+  userId: "123",
+  role: "admin",
+});
+console.log("Generated Token:", result.token);
+console.log("Expires At:", result.expiresAt);
+```
+
 ### `signInWithRefresh(payload: Record<string, any>): Promise<TokenPair>`
 
 Generates both access and refresh tokens for the given user payload.
@@ -435,6 +451,24 @@ const tokens = await authProvider.signInWithRefresh({
 });
 console.log("Access Token:", tokens.accessToken);
 console.log("Refresh Token:", tokens.refreshToken);
+```
+
+### `signInWithRefreshAndExpiry(payload: Record<string, any>): Promise<TokenPairWithExpiry>`
+
+Generates both access and refresh tokens with expiration dates for the given user payload.
+
+#### Example:
+```typescript
+const authProvider = useJWTAuthProvider();
+
+const tokens = await authProvider.signInWithRefreshAndExpiry({
+  userId: "123",
+  role: "admin",
+});
+console.log("Access Token:", tokens.accessToken);
+console.log("Access Token Expires At:", tokens.accessTokenExpiresAt);
+console.log("Refresh Token:", tokens.refreshToken);
+console.log("Refresh Token Expires At:", tokens.refreshTokenExpiresAt);
 ```
 
 ### `verify<T>(token: string): Promise<T | null>`
@@ -537,7 +571,7 @@ const isValidCustom = await authProvider.validateTokens(
 - `isApiKeyValid(req)` - Check if API key is valid
 - `isRefreshTokenValid<T>(req)` - Check if refresh token is valid
 - `validateTokenPair<T>(accessToken, refreshToken, validateFn?)` - Validate if both tokens are valid and belong to the same user
-- `refreshAccessToken<T>(accessToken, refreshToken, validateFn?)` - Generate new access token from refresh token with validation
+- `refreshAccessToken<T>(accessToken, refreshToken, validateFn?)` - Generate new access and refresh tokens with expiry dates from refresh token with validation
 
 ### Types
 
@@ -545,6 +579,8 @@ const isValidCustom = await authProvider.validateTokens(
 - `JWTGuardOptions<TGuards>` - Guard configuration options
 - `PluginOptions<TGuards>` - Plugin configuration options
 - `TokenPair` - Object containing access and refresh tokens
+- `TokenWithExpiry` - Object containing token and expiration date
+- `TokenPairWithExpiry` - Object containing access and refresh tokens with expiration dates
 
 ---
 
@@ -555,13 +591,18 @@ const isValidCustom = await authProvider.validateTokens(
 ```typescript
 import { useJWTAuthProvider, validateTokenPair, refreshAccessToken } from "@tsdiapi/jwt-auth";
 
-// 1. Sign in with refresh token
+// 1. Sign in with refresh token and expiry dates
 const authProvider = useJWTAuthProvider();
-const tokens = await authProvider.signInWithRefresh({
+const tokens = await authProvider.signInWithRefreshAndExpiry({
   userId: "123",
   role: "user",
   email: "user@example.com"
 });
+
+console.log("Access Token:", tokens.accessToken);
+console.log("Access Token Expires At:", tokens.accessTokenExpiresAt);
+console.log("Refresh Token:", tokens.refreshToken);
+console.log("Refresh Token Expires At:", tokens.refreshTokenExpiresAt);
 
 // 2. Validate token pair
 const isValid = await validateTokenPair(tokens.accessToken, tokens.refreshToken);
@@ -579,14 +620,17 @@ const isValidCustom = await validateTokenPair(
   }
 );
 
-// 4. Refresh access token when it expires
-const newAccessToken = await refreshAccessToken(tokens.accessToken, tokens.refreshToken);
-if (newAccessToken) {
-  console.log("New access token generated:", newAccessToken);
+// 4. Refresh tokens when they expire
+const newTokens = await refreshAccessToken(tokens.accessToken, tokens.refreshToken);
+if (newTokens) {
+  console.log("New access token:", newTokens.accessToken);
+  console.log("New access token expires at:", newTokens.accessTokenExpiresAt);
+  console.log("New refresh token:", newTokens.refreshToken);
+  console.log("New refresh token expires at:", newTokens.refreshTokenExpiresAt);
 }
 
 // 5. Refresh with custom validation
-const newAccessTokenCustom = await refreshAccessToken(
+const newTokensCustom = await refreshAccessToken(
   tokens.accessToken, 
   tokens.refreshToken,
   (accessPayload, refreshPayload) => {
@@ -636,6 +680,9 @@ useRoute()
   .post('/auth/refresh')
   .code(200, Type.Object({
     accessToken: Type.String(),
+    refreshToken: Type.String(),
+    accessTokenExpiresAt: Type.String(),
+    refreshTokenExpiresAt: Type.String(),
   }))
   .code(403, Type.Object({
     error: Type.String(),
@@ -657,9 +704,9 @@ useRoute()
              accessPayload.status === 'active';
     };
     
-    const newAccessToken = await refreshAccessToken(accessToken, refreshToken, customValidation);
+    const newTokens = await refreshAccessToken(accessToken, refreshToken, customValidation);
     
-    if (!newAccessToken) {
+    if (!newTokens) {
       return {
         status: 403,
         data: { error: 'Invalid tokens or validation failed' }
@@ -668,7 +715,12 @@ useRoute()
     
     return {
       status: 200,
-      data: { accessToken: newAccessToken }
+      data: { 
+        accessToken: newTokens.accessToken,
+        refreshToken: newTokens.refreshToken,
+        accessTokenExpiresAt: newTokens.accessTokenExpiresAt.toISOString(),
+        refreshTokenExpiresAt: newTokens.refreshTokenExpiresAt.toISOString()
+      }
     };
   })
   .build();
