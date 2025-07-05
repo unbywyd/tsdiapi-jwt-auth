@@ -226,7 +226,7 @@ type ForbiddenResponses = {
     403: typeof forbiddenResponse;
 };
 
-export function GetAccessToken(req: FastifyRequest): string | undefined {
+export function getAccessToken(req: FastifyRequest): string | undefined {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
         return undefined;

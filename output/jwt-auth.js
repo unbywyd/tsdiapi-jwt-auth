@@ -156,7 +156,7 @@ export const JWTTokenAuthCheckHandler = async (token) => {
 const forbiddenResponse = Type.Object({
     error: Type.String(),
 });
-export function GetAccessToken(req) {
+export function getAccessToken(req) {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
         return undefined;
