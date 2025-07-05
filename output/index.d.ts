@@ -4,6 +4,8 @@ export * from "./jwt-auth.js";
 export type PluginOptions<TGuards extends Record<string, ValidateSessionFunction<any>> = {}> = {
     secretKey?: string;
     expirationTime?: number;
+    refreshSecretKey?: string;
+    refreshExpirationTime?: number;
     guards?: TGuards;
     apiKeys?: Record<string, APIKeyEntry | 'JWT' | true>;
 };

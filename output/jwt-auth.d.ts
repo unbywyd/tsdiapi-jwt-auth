@@ -1,4 +1,4 @@
-import { APIKeyEntry, PluginOptions } from './index.js';
+import { PluginOptions } from './index.js';
 import type { FastifyRequest } from 'fastify';
 import { GuardFn } from '@tsdiapi/server';
 export type ValidateSessionFunction<T> = (session: T) => Promise<boolean | string> | (boolean | string);
@@ -9,17 +9,28 @@ export type JWTGuardOptions<TGuards extends Record<string, ValidateSessionFuncti
     guardDescription?: string;
     optional?: boolean;
 };
+export type ValidateTokenPairFunction<T> = (accessPayload: any, refreshPayload: any) => (T | null) | Promise<(T | null)>;
+export type TokenPair = {
+    accessToken: string;
+    refreshToken: string;
+};
 export interface AuthProvider<TGuards extends Record<string, ValidateSessionFunction<any>>> {
     init(config: PluginOptions<TGuards>): void;
     signIn<T extends Record<string, any>>(payload: T): Promise<string>;
+    signInWithRefresh<T extends Record<string, any>>(payload: T): Promise<TokenPair>;
     verify<T>(token: string): Promise<T | null>;
+    verifyRefresh<T>(token: string): Promise<T | null>;
+    validateTokens<T>(accessToken: string, refreshToken: string, validateFn?: ValidateTokenPairFunction<T>): Promise<T | null>;
     getGuard(name: keyof TGuards): ValidateSessionFunction<any> | undefined;
 }
 export declare class JWTAuthProvider<TGuards extends Record<string, ValidateSessionFunction<any>>> implements AuthProvider<TGuards> {
     config: PluginOptions<TGuards> | null;
     init(config: PluginOptions<TGuards>): void;
     signIn<T extends Record<string, any>>(payload: T): Promise<string>;
+    signInWithRefresh<T extends Record<string, any>>(payload: T): Promise<TokenPair>;
     verify<T>(token: string): Promise<T>;
+    verifyRefresh<T>(token: string): Promise<T>;
+    validateTokens<T>(accessToken: string, refreshToken: string, validateFn?: ValidateTokenPairFunction<T>): Promise<T | null>;
     getGuard(name: keyof TGuards): ValidateSessionFunction<any> | undefined;
 }
 declare const provider: JWTAuthProvider<Record<string, ValidateSessionFunction<any>>>;
@@ -27,7 +38,7 @@ export declare class ApiKeyProvider {
     constructor();
     config: PluginOptions | null;
     init(config: PluginOptions): void;
-    get keys(): Record<string, true | "JWT" | APIKeyEntry>;
+    get keys(): Record<string, true | "JWT" | import("./index.js").APIKeyEntry>;
     verify(key: string): Promise<unknown>;
 }
 declare const apiKeyProvider: ApiKeyProvider;
@@ -44,4 +55,7 @@ export declare function useSession<T>(req: FastifyRequest): T | undefined;
 export declare function APIKeyGuard(options?: JWTGuardOptions<any>): GuardFn<ForbiddenResponses, unknown>;
 export declare function isBearerValid<T>(req: FastifyRequest): Promise<false | T>;
 export declare function isApiKeyValid(req: FastifyRequest): Promise<false | unknown>;
+export declare function isRefreshTokenValid<T>(req: FastifyRequest): Promise<false | T>;
+export declare function validateTokenPair<T>(accessToken: string, refreshToken: string, validateFn?: ValidateTokenPairFunction<T>): Promise<T | null>;
+export declare function refreshAccessToken<T>(accessToken: string, refreshToken: string, validateFn?: ValidateTokenPairFunction<T>): Promise<string | null>;
 //# sourceMappingURL=jwt-auth.d.ts.map
