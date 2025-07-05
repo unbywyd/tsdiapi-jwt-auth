@@ -226,6 +226,14 @@ type ForbiddenResponses = {
     403: typeof forbiddenResponse;
 };
 
+export function GetAccessToken(req: FastifyRequest): string | undefined {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return undefined;
+    }
+    return authHeader.split(/\s+/)[1];
+}
+
 export function JWTGuard(
     options?: JWTGuardOptions<any>
 ): GuardFn<ForbiddenResponses, unknown> {

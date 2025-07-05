@@ -156,6 +156,13 @@ export const JWTTokenAuthCheckHandler = async (token) => {
 const forbiddenResponse = Type.Object({
     error: Type.String(),
 });
+export function GetAccessToken(req) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return undefined;
+    }
+    return authHeader.split(/\s+/)[1];
+}
 export function JWTGuard(options) {
     return async (req, reply) => {
         try {
