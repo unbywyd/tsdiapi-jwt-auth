@@ -1,7 +1,7 @@
 import { JWTPayload, jwtVerify, SignJWT } from 'jose'
-import { APIKeyEntry, PluginOptions } from './index.js';
+import { PluginOptions } from './index.js';
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import { TSchema, Type, Static } from '@sinclair/typebox';
+import { Type } from '@sinclair/typebox';
 import { GuardFn, ResponseUnion } from '@tsdiapi/server';
 
 export type ValidateSessionFunction<T> = (session: T) => Promise<boolean | string> | (boolean | string);
@@ -13,12 +13,19 @@ export type JWTGuardOptions<TGuards extends Record<string, ValidateSessionFuncti
     guardDescription?: string;
     optional?: boolean;
 };
-
+export type ValidateTokenPairFunction<T> = (accessPayload: any, refreshPayload: any) => (T | null) | Promise<(T | null)>;
+export type TokenPair = {
+    accessToken: string;
+    refreshToken: string;
+};
 
 export interface AuthProvider<TGuards extends Record<string, ValidateSessionFunction<any>>> {
     init(config: PluginOptions<TGuards>): void;
     signIn<T extends Record<string, any>>(payload: T): Promise<string>;
+    signInWithRefresh<T extends Record<string, any>>(payload: T): Promise<TokenPair>;
     verify<T>(token: string): Promise<T | null>;
+    verifyRefresh<T>(token: string): Promise<T | null>;
+    validateTokens<T>(accessToken: string, refreshToken: string, validateFn?: ValidateTokenPairFunction<T>): Promise<T | null>;
     getGuard(name: keyof TGuards): ValidateSessionFunction<any> | undefined;
 }
 
@@ -41,10 +48,67 @@ export class JWTAuthProvider<TGuards extends Record<string, ValidateSessionFunct
             .sign(new TextEncoder().encode(this.config.secretKey));
     }
 
+    async signInWithRefresh<T extends Record<string, any>>(payload: T): Promise<TokenPair> {
+        const iat = Math.floor(Date.now() / 1000);
+        const accessExp = iat + this.config.expirationTime;
+        const refreshExp = iat + this.config.refreshExpirationTime;
+
+        const accessToken = await new SignJWT({ ...(payload as JWTPayload) })
+            .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
+            .setExpirationTime(accessExp)
+            .setIssuedAt(iat)
+            .setNotBefore(iat)
+            .sign(new TextEncoder().encode(this.config.secretKey));
+
+        const refreshToken = await new SignJWT({ ...(payload as JWTPayload) })
+            .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
+            .setExpirationTime(refreshExp)
+            .setIssuedAt(iat)
+            .setNotBefore(iat)
+            .sign(new TextEncoder().encode(this.config.refreshSecretKey));
+
+        return {
+            accessToken,
+            refreshToken
+        };
+    }
+
     async verify<T>(token: string): Promise<T> {
         try {
             const { payload } = await jwtVerify(token, new TextEncoder().encode(this.config.secretKey));
             return payload as T;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    async verifyRefresh<T>(token: string): Promise<T> {
+        try {
+            const { payload } = await jwtVerify(token, new TextEncoder().encode(this.config.refreshSecretKey));
+            return payload as T;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    async validateTokens<T>(accessToken: string, refreshToken: string, validateFn?: ValidateTokenPairFunction<T>): Promise<T | null> {
+        try {
+            const accessPayload = await this.verify<T>(accessToken);
+            const refreshPayload = await this.verifyRefresh<T>(refreshToken);
+
+            if (!accessPayload || !refreshPayload) {
+                return null;
+            }
+
+            // If custom validation function is provided, use it
+            if (validateFn) {
+                return await validateFn(accessPayload, refreshPayload);
+            }
+
+            // Default validation: check if both tokens belong to the same user
+            // This assumes both tokens have the same structure and we can compare them
+            // You can customize this logic based on your payload structure
+            return JSON.stringify(accessPayload) === JSON.stringify(refreshPayload) ? refreshPayload : null;
         } catch (e) {
             return null;
         }
@@ -279,6 +343,37 @@ export async function isApiKeyValid(req: FastifyRequest): Promise<false | unknow
         return session;
     } catch (error) {
         return false;
+    }
+}
+
+export async function isRefreshTokenValid<T>(req: FastifyRequest): Promise<false | T> {
+    const refreshToken = req.headers['x-refresh-token'] as string;
+    if (!refreshToken) return false;
+    try {
+        const session = await provider.verifyRefresh<T>(refreshToken);
+        if (!session) return false;
+        req.session = session;
+        return session;
+    } catch (error) {
+        return false;
+    }
+}
+
+export async function validateTokenPair<T>(accessToken: string, refreshToken: string, validateFn?: ValidateTokenPairFunction<T>): Promise<T | null> {
+    return await provider.validateTokens<T>(accessToken, refreshToken, validateFn);
+}
+
+export async function refreshAccessToken<T>(accessToken: string, refreshToken: string, validateFn?: ValidateTokenPairFunction<T>): Promise<string | null> {
+    try {
+        // First validate both tokens
+        const isValid = await provider.validateTokens<T>(accessToken, refreshToken, validateFn);
+        if (!isValid) {
+            return null;
+        }
+
+        return await provider.signIn(isValid);
+    } catch (error) {
+        return null;
     }
 }
 

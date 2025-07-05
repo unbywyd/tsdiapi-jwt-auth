@@ -36,6 +36,39 @@
             "transform": "x * 60"
         },
         {
+            "name": "JWT_REFRESH_SECRET_KEY",
+            "type": "string",
+            "default": "",
+            "configurable": true,
+            "description": "The secret key used for signing JWT refresh tokens",
+            "inquirer": {
+                "type": "input",
+                "message": "Enter your JWT refresh secret key:"
+            },
+            "validate": {
+                "type": "string",
+                "minLength": 10,
+                "errorMessage": "JWT refresh secret key must be at least 10 characters long."
+            }
+        },
+        {
+            "name": "JWT_REFRESH_EXPIRATION_TIME",
+            "type": "number",
+            "default": 129600,
+            "configurable": true,
+            "description": "JWT refresh token expiration time in minutes (default: 90 days)",
+            "inquirer": {
+                "type": "number",
+                "message": "Enter your JWT refresh expiration time in minutes:"
+            },
+            "validate": {
+                "type": "integer",
+                "minimum": 1,
+                "errorMessage": "Refresh expiration time must be a positive number."
+            },
+            "transform": "x * 60"
+        },
+        {
             "name": "JWT_ADMIN_SECRET",
             "type": "string",
             "default": "admin-secret",

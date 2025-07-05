@@ -6,6 +6,8 @@ export * from "./jwt-auth.js";
 export type PluginOptions<TGuards extends Record<string, ValidateSessionFunction<any>> = {}> = {
     secretKey?: string;
     expirationTime?: number;
+    refreshSecretKey?: string;
+    refreshExpirationTime?: number;
     guards?: TGuards;
     apiKeys?: Record<string, APIKeyEntry | 'JWT' | true>;
 };
@@ -16,7 +18,9 @@ export type APIKeyEntry = {
 
 const defaultConfig: PluginOptions = {
     secretKey: 'secret-key-for-jwt',
-    expirationTime: 60 * 60 * 24 * 7 // 7 days
+    expirationTime: 60 * 60 * 24 * 7, // 7 days
+    refreshSecretKey: 'refresh-secret-key-for-jwt',
+    refreshExpirationTime: 60 * 60 * 24 * 30 // 30 days
 }
 
 class App implements AppPlugin {
@@ -33,9 +37,13 @@ class App implements AppPlugin {
 
         const secretKeyFromConfig = appConfig.get('JWT_SECRET_KEY', config.secretKey || defaultConfig.secretKey) as string;
         const expirationTime = appConfig.get('JWT_EXPIRATION_TIME', config.expirationTime || defaultConfig.expirationTime) as number;
+        const refreshSecretKeyFromConfig = appConfig.get('JWT_REFRESH_SECRET_KEY', config.refreshSecretKey || defaultConfig.refreshSecretKey) as string;
+        const refreshExpirationTime = appConfig.get('JWT_REFRESH_EXPIRATION_TIME', config.refreshExpirationTime || defaultConfig.refreshExpirationTime) as number;
 
         this.config.secretKey = secretKeyFromConfig;
         this.config.expirationTime = expirationTime;
+        this.config.refreshSecretKey = refreshSecretKeyFromConfig;
+        this.config.refreshExpirationTime = refreshExpirationTime;
         provider.init(this.config);
         apiKeyProvider.init(this.config);
     }

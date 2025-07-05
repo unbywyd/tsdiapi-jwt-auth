@@ -40,6 +40,8 @@ createApp({
     createPlugin({
       secretKey: "your-secret-key", // Use JWT_SECRET_KEY in .env as an alternative
       expirationTime: 60 * 60 * 24 * 7, // Token valid for 7 days, override with JWT_EXPIRATION_TIME in .env
+      refreshSecretKey: "your-refresh-secret-key", // Use JWT_REFRESH_SECRET_KEY in .env as an alternative
+      refreshExpirationTime: 60 * 60 * 24 * 30, // Refresh token valid for 30 days, override with JWT_REFRESH_EXPIRATION_TIME in .env
       guards: {
         admin: (session) => session.role === 'admin',
         user: (session) => session.role === 'user'
@@ -50,7 +52,8 @@ createApp({
           description: 'Admin API key',
           validate: () => true
         }
-      }
+      },
+
     }),
   ],
 });
@@ -63,6 +66,8 @@ Define environment variables in your `.env` file to avoid hardcoding sensitive d
 ```env
 JWT_SECRET_KEY=your-secret-key
 JWT_EXPIRATION_TIME=604800
+JWT_REFRESH_SECRET_KEY=your-refresh-secret-key
+JWT_REFRESH_EXPIRATION_TIME=2592000
 ```
 
 ## Protecting Endpoints
@@ -416,6 +421,22 @@ const token = await authProvider.signIn({
 console.log("Generated Token:", token);
 ```
 
+### `signInWithRefresh(payload: Record<string, any>): Promise<TokenPair>`
+
+Generates both access and refresh tokens for the given user payload.
+
+#### Example:
+```typescript
+const authProvider = useJWTAuthProvider();
+
+const tokens = await authProvider.signInWithRefresh({
+  userId: "123",
+  role: "admin",
+});
+console.log("Access Token:", tokens.accessToken);
+console.log("Refresh Token:", tokens.refreshToken);
+```
+
 ### `verify<T>(token: string): Promise<T | null>`
 
 Verifies a JWT token and returns the decoded session payload.
@@ -432,6 +453,49 @@ if (session) {
 }
 ```
 
+### `verifyRefresh<T>(token: string): Promise<T | null>`
+
+Verifies a refresh token and returns the decoded session payload.
+
+#### Example:
+```typescript
+const authProvider = useJWTAuthProvider();
+
+const session = await authProvider.verifyRefresh<{ userId: string; role: string }>(refreshToken);
+if (session) {
+  console.log("Valid Refresh Token for User:", session.userId);
+} else {
+  console.log("Invalid refresh token");
+}
+```
+
+### `validateTokens<T>(accessToken: string, refreshToken: string, validateFn?: (accessPayload: any, refreshPayload: any) => boolean | Promise<boolean>): Promise<boolean>`
+
+Validates if both access and refresh tokens are valid and belong to the same user. Optionally accepts a custom validation function.
+
+#### Example:
+```typescript
+const authProvider = useJWTAuthProvider();
+
+// Basic validation (compares payloads)
+const isValid = await authProvider.validateTokens(accessToken, refreshToken);
+if (isValid) {
+  console.log("Both tokens are valid and belong to the same user");
+} else {
+  console.log("Tokens are invalid or don't match");
+}
+
+// Custom validation
+const isValidCustom = await authProvider.validateTokens(
+  accessToken, 
+  refreshToken,
+  (accessPayload, refreshPayload) => {
+    return accessPayload.userId === refreshPayload.userId && 
+           accessPayload.status === 'active';
+  }
+);
+```
+
 ---
 
 ## Configuration
@@ -440,15 +504,20 @@ if (session) {
 
 - `JWT_SECRET_KEY` - Secret key for JWT signing (default: 'secret-key-for-jwt')
 - `JWT_EXPIRATION_TIME` - Token expiration time in seconds (default: 604800 - 7 days)
+- `JWT_REFRESH_SECRET_KEY` - Secret key for JWT refresh token signing (default: 'refresh-secret-key-for-jwt')
+- `JWT_REFRESH_EXPIRATION_TIME` - Refresh token expiration time in seconds (default: 2592000 - 30 days)
 
 ### Plugin Options
 
-| Option           | Type                                      | Description                            |
-| ---------------- | ----------------------------------------- | -------------------------------------- |
-| `secretKey`      | `string`                                  | Secret key for signing JWT tokens.     |
-| `expirationTime` | `number`                                  | Token expiration time in seconds.      |
-| `guards`         | `Record<string, ValidateSessionFunction>` | Custom guards for validating sessions. |
-| `apiKeys`        | `Record<string, APIKeyEntry \| 'JWT' \| true>` | API keys configuration.                |
+| Option                | Type                                      | Description                                    |
+| --------------------- | ----------------------------------------- | ---------------------------------------------- |
+| `secretKey`           | `string`                                  | Secret key for signing JWT tokens.             |
+| `expirationTime`      | `number`                                  | Token expiration time in seconds.              |
+| `refreshSecretKey`    | `string`                                  | Secret key for signing refresh tokens.         |
+| `refreshExpirationTime` | `number`                               | Refresh token expiration time in seconds.      |
+| `guards`              | `Record<string, ValidateSessionFunction>` | Custom guards for validating sessions.         |
+| `apiKeys`             | `Record<string, APIKeyEntry \| 'JWT' \| true>` | API keys configuration.                        |
+
 
 ---
 
@@ -466,12 +535,179 @@ if (session) {
 - `useApiKeyProvider()` - Get API key provider instance
 - `isBearerValid<T>(req)` - Check if Bearer token is valid
 - `isApiKeyValid(req)` - Check if API key is valid
+- `isRefreshTokenValid<T>(req)` - Check if refresh token is valid
+- `validateTokenPair<T>(accessToken, refreshToken, validateFn?)` - Validate if both tokens are valid and belong to the same user
+- `refreshAccessToken<T>(accessToken, refreshToken, validateFn?)` - Generate new access token from refresh token with validation
 
 ### Types
 
 - `ValidateSessionFunction<T>` - Session validation function type
 - `JWTGuardOptions<TGuards>` - Guard configuration options
 - `PluginOptions<TGuards>` - Plugin configuration options
+- `TokenPair` - Object containing access and refresh tokens
+
+---
+
+## Refresh Token Usage Examples
+
+### Basic Refresh Token Flow
+
+```typescript
+import { useJWTAuthProvider, validateTokenPair, refreshAccessToken } from "@tsdiapi/jwt-auth";
+
+// 1. Sign in with refresh token
+const authProvider = useJWTAuthProvider();
+const tokens = await authProvider.signInWithRefresh({
+  userId: "123",
+  role: "user",
+  email: "user@example.com"
+});
+
+// 2. Validate token pair
+const isValid = await validateTokenPair(tokens.accessToken, tokens.refreshToken);
+if (isValid) {
+  console.log("Tokens are valid and belong to the same user");
+}
+
+// 3. Validate with custom logic
+const isValidCustom = await validateTokenPair(
+  tokens.accessToken, 
+  tokens.refreshToken,
+  (accessPayload, refreshPayload) => {
+    return accessPayload.userId === refreshPayload.userId && 
+           accessPayload.role === refreshPayload.role;
+  }
+);
+
+// 4. Refresh access token when it expires
+const newAccessToken = await refreshAccessToken(tokens.accessToken, tokens.refreshToken);
+if (newAccessToken) {
+  console.log("New access token generated:", newAccessToken);
+}
+
+// 5. Refresh with custom validation
+const newAccessTokenCustom = await refreshAccessToken(
+  tokens.accessToken, 
+  tokens.refreshToken,
+  (accessPayload, refreshPayload) => {
+    return accessPayload.userId === refreshPayload.userId && 
+           accessPayload.status === 'active';
+  }
+);
+```
+
+### Custom Token Validation
+
+```typescript
+import { validateTokenPair } from "@tsdiapi/jwt-auth";
+
+// Custom validation function
+const customValidation = (accessPayload, refreshPayload) => {
+  // Custom validation logic
+  if (accessPayload.userId !== refreshPayload.userId) {
+    return false;
+  }
+  
+  // Check if user is still active
+  if (accessPayload.status === 'inactive') {
+    return false;
+  }
+  
+  // Check if tokens were issued for the same session
+  if (accessPayload.sessionId !== refreshPayload.sessionId) {
+    return false;
+  }
+  
+  return true;
+};
+
+// Use in your application
+const isValid = await validateTokenPair(accessToken, refreshToken, customValidation);
+```
+
+### Refresh Token Endpoint Example
+
+```typescript
+import { useRoute } from "@tsdiapi/server";
+import { Type } from "@sinclair/typebox";
+import { refreshAccessToken, isRefreshTokenValid } from "@tsdiapi/jwt-auth";
+
+useRoute()
+  .post('/auth/refresh')
+  .code(200, Type.Object({
+    accessToken: Type.String(),
+  }))
+  .code(403, Type.Object({
+    error: Type.String(),
+  }))
+  .handler(async (req) => {
+    const accessToken = req.headers.authorization?.split(/\s+/)[1] as string;
+    const refreshToken = req.headers['x-refresh-token'] as string;
+    
+    if (!accessToken || !refreshToken) {
+      return {
+        status: 403,
+        data: { error: 'Both access and refresh tokens are required' }
+      };
+    }
+    
+    // Custom validation function
+    const customValidation = (accessPayload, refreshPayload) => {
+      return accessPayload.userId === refreshPayload.userId && 
+             accessPayload.status === 'active';
+    };
+    
+    const newAccessToken = await refreshAccessToken(accessToken, refreshToken, customValidation);
+    
+    if (!newAccessToken) {
+      return {
+        status: 403,
+        data: { error: 'Invalid tokens or validation failed' }
+      };
+    }
+    
+    return {
+      status: 200,
+      data: { accessToken: newAccessToken }
+    };
+  })
+  .build();
+```
+
+### Token Pair Validation Endpoint
+
+```typescript
+import { useRoute } from "@tsdiapi/server";
+import { Type } from "@sinclair/typebox";
+import { validateTokenPair } from "@tsdiapi/jwt-auth";
+
+useRoute()
+  .post('/auth/validate-tokens')
+  .code(200, Type.Object({
+    isValid: Type.Boolean(),
+  }))
+  .code(400, Type.Object({
+    error: Type.String(),
+  }))
+  .handler(async (req) => {
+    const { accessToken, refreshToken } = req.body;
+    
+    if (!accessToken || !refreshToken) {
+      return {
+        status: 400,
+        data: { error: 'Both access and refresh tokens are required' }
+      };
+    }
+    
+    const isValid = await validateTokenPair(accessToken, refreshToken);
+    
+    return {
+      status: 200,
+      data: { isValid }
+    };
+  })
+  .build();
+```
 
 ---
 
