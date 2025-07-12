@@ -434,7 +434,14 @@ export async function refreshAccessToken<T>(accessToken: string, refreshToken: s
             return null;
         }
 
-        return await provider.signInWithRefreshAndExpiry(isValid);
+        // Extract payload from refresh token (not from validation result)
+        const refreshPayload = await provider.verifyRefresh<T>(refreshToken);
+        if (!refreshPayload) {
+            return null;
+        }
+
+        // Generate new tokens using the refresh token payload
+        return await provider.signInWithRefreshAndExpiry(refreshPayload);
     } catch (error) {
         return null;
     }
