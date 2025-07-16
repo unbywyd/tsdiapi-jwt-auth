@@ -3,6 +3,7 @@ import { PluginOptions } from './index.js';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import { GuardFn, ResponseUnion } from '@tsdiapi/server';
+import { randomUUID } from 'crypto';
 
 export type ValidateSessionFunction<T> = (session: T) => Promise<boolean | string> | (boolean | string);
 
@@ -52,22 +53,26 @@ export class JWTAuthProvider<TGuards extends Record<string, ValidateSessionFunct
     signIn<T extends Record<string, any>>(payload: T): Promise<string> {
         const iat = Math.floor(Date.now() / 1000);
         const exp = iat + this.config.expirationTime;
+        const jti = randomUUID();
         return new SignJWT({ ...(payload as JWTPayload) })
             .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
             .setExpirationTime(exp)
             .setIssuedAt(iat)
             .setNotBefore(iat)
+            .setJti(jti)
             .sign(new TextEncoder().encode(this.config.secretKey));
     }
 
     async signInWithExpiry<T extends Record<string, any>>(payload: T): Promise<TokenWithExpiry> {
         const iat = Math.floor(Date.now() / 1000);
         const exp = iat + this.config.expirationTime;
+        const jti = randomUUID();
         const token = await new SignJWT({ ...(payload as JWTPayload) })
             .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
             .setExpirationTime(exp)
             .setIssuedAt(iat)
             .setNotBefore(iat)
+            .setJti(jti)
             .sign(new TextEncoder().encode(this.config.secretKey));
 
         return {
@@ -80,12 +85,17 @@ export class JWTAuthProvider<TGuards extends Record<string, ValidateSessionFunct
         const iat = Math.floor(Date.now() / 1000);
         const accessExp = iat + this.config.expirationTime;
         const refreshExp = iat + this.config.refreshExpirationTime;
+        
+        // Generate unique JTI (JWT ID) to ensure token uniqueness
+        const accessJti = randomUUID();
+        const refreshJti = randomUUID();
 
         const accessToken = await new SignJWT({ ...(payload as JWTPayload) })
             .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
             .setExpirationTime(accessExp)
             .setIssuedAt(iat)
             .setNotBefore(iat)
+            .setJti(accessJti)
             .sign(new TextEncoder().encode(this.config.secretKey));
 
         const refreshToken = await new SignJWT({ ...(payload as JWTPayload) })
@@ -93,6 +103,7 @@ export class JWTAuthProvider<TGuards extends Record<string, ValidateSessionFunct
             .setExpirationTime(refreshExp)
             .setIssuedAt(iat)
             .setNotBefore(iat)
+            .setJti(refreshJti)
             .sign(new TextEncoder().encode(this.config.refreshSecretKey));
 
         return {
@@ -105,12 +116,17 @@ export class JWTAuthProvider<TGuards extends Record<string, ValidateSessionFunct
         const iat = Math.floor(Date.now() / 1000);
         const accessExp = iat + this.config.expirationTime;
         const refreshExp = iat + this.config.refreshExpirationTime;
+        
+        // Generate unique JTI (JWT ID) to ensure token uniqueness
+        const accessJti = randomUUID();
+        const refreshJti = randomUUID();
 
         const accessToken = await new SignJWT({ ...(payload as JWTPayload) })
             .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
             .setExpirationTime(accessExp)
             .setIssuedAt(iat)
             .setNotBefore(iat)
+            .setJti(accessJti)
             .sign(new TextEncoder().encode(this.config.secretKey));
 
         const refreshToken = await new SignJWT({ ...(payload as JWTPayload) })
@@ -118,6 +134,7 @@ export class JWTAuthProvider<TGuards extends Record<string, ValidateSessionFunct
             .setExpirationTime(refreshExp)
             .setIssuedAt(iat)
             .setNotBefore(iat)
+            .setJti(refreshJti)
             .sign(new TextEncoder().encode(this.config.refreshSecretKey));
 
         return {
