@@ -1,5 +1,6 @@
 import { jwtVerify, SignJWT } from 'jose';
 import { Type } from '@sinclair/typebox';
+import { randomUUID } from 'crypto';
 export class JWTAuthProvider {
     config;
     init(config) {
@@ -8,21 +9,25 @@ export class JWTAuthProvider {
     signIn(payload) {
         const iat = Math.floor(Date.now() / 1000);
         const exp = iat + this.config.expirationTime;
+        const jti = randomUUID();
         return new SignJWT({ ...payload })
             .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
             .setExpirationTime(exp)
             .setIssuedAt(iat)
             .setNotBefore(iat)
+            .setJti(jti)
             .sign(new TextEncoder().encode(this.config.secretKey));
     }
     async signInWithExpiry(payload) {
         const iat = Math.floor(Date.now() / 1000);
         const exp = iat + this.config.expirationTime;
+        const jti = randomUUID();
         const token = await new SignJWT({ ...payload })
             .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
             .setExpirationTime(exp)
             .setIssuedAt(iat)
             .setNotBefore(iat)
+            .setJti(jti)
             .sign(new TextEncoder().encode(this.config.secretKey));
         return {
             token,
@@ -33,17 +38,22 @@ export class JWTAuthProvider {
         const iat = Math.floor(Date.now() / 1000);
         const accessExp = iat + this.config.expirationTime;
         const refreshExp = iat + this.config.refreshExpirationTime;
+        // Generate unique JTI (JWT ID) to ensure token uniqueness
+        const accessJti = randomUUID();
+        const refreshJti = randomUUID();
         const accessToken = await new SignJWT({ ...payload })
             .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
             .setExpirationTime(accessExp)
             .setIssuedAt(iat)
             .setNotBefore(iat)
+            .setJti(accessJti)
             .sign(new TextEncoder().encode(this.config.secretKey));
         const refreshToken = await new SignJWT({ ...payload })
             .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
             .setExpirationTime(refreshExp)
             .setIssuedAt(iat)
             .setNotBefore(iat)
+            .setJti(refreshJti)
             .sign(new TextEncoder().encode(this.config.refreshSecretKey));
         return {
             accessToken,
@@ -54,17 +64,22 @@ export class JWTAuthProvider {
         const iat = Math.floor(Date.now() / 1000);
         const accessExp = iat + this.config.expirationTime;
         const refreshExp = iat + this.config.refreshExpirationTime;
+        // Generate unique JTI (JWT ID) to ensure token uniqueness
+        const accessJti = randomUUID();
+        const refreshJti = randomUUID();
         const accessToken = await new SignJWT({ ...payload })
             .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
             .setExpirationTime(accessExp)
             .setIssuedAt(iat)
             .setNotBefore(iat)
+            .setJti(accessJti)
             .sign(new TextEncoder().encode(this.config.secretKey));
         const refreshToken = await new SignJWT({ ...payload })
             .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
             .setExpirationTime(refreshExp)
             .setIssuedAt(iat)
             .setNotBefore(iat)
+            .setJti(refreshJti)
             .sign(new TextEncoder().encode(this.config.refreshSecretKey));
         return {
             accessToken,
