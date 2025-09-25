@@ -1,6 +1,22 @@
-import { PluginOptions } from './index.js';
-import type { FastifyRequest } from 'fastify';
+import { PluginOptions, AuthMode } from './index.js';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 import { GuardFn } from '@tsdiapi/server';
+declare module 'fastify' {
+    interface FastifyRequest {
+        user?: UserData;
+    }
+    interface Session {
+        user?: UserData;
+        jwt?: UserData;
+        isAuthenticated?: boolean;
+        destroy(callback?: (err?: Error) => void): void;
+        regenerate(): Promise<void>;
+    }
+}
+export interface UserData {
+    userId: string;
+    [key: string]: any;
+}
 export type ValidateSessionFunction<T> = (session: T) => Promise<boolean | string> | (boolean | string);
 export type JWTGuardOptions<TGuards extends Record<string, ValidateSessionFunction<any>>> = {
     guardName?: keyof TGuards;
@@ -34,6 +50,7 @@ export interface AuthProvider<TGuards extends Record<string, ValidateSessionFunc
     verifyRefresh<T>(token: string): Promise<T | null>;
     validateTokens<T>(accessToken: string, refreshToken: string, validateFn?: ValidateTokenPairFunction<T>): Promise<T | null>;
     getGuard(name: keyof TGuards): ValidateSessionFunction<any> | undefined;
+    logout?(req: FastifyRequest, reply: FastifyReply): Promise<void>;
 }
 export declare class JWTAuthProvider<TGuards extends Record<string, ValidateSessionFunction<any>>> implements AuthProvider<TGuards> {
     config: PluginOptions<TGuards> | null;
@@ -46,6 +63,7 @@ export declare class JWTAuthProvider<TGuards extends Record<string, ValidateSess
     verifyRefresh<T>(token: string): Promise<T>;
     validateTokens<T>(accessToken: string, refreshToken: string, validateFn?: ValidateTokenPairFunction<T>): Promise<T | null>;
     getGuard(name: keyof TGuards): ValidateSessionFunction<any> | undefined;
+    logout(req: FastifyRequest, reply: FastifyReply): Promise<void>;
 }
 declare const provider: JWTAuthProvider<Record<string, ValidateSessionFunction<any>>>;
 export declare class ApiKeyProvider {
@@ -56,7 +74,20 @@ export declare class ApiKeyProvider {
     verify(key: string): Promise<unknown>;
 }
 declare const apiKeyProvider: ApiKeyProvider;
-export { provider, apiKeyProvider };
+export declare class SessionProvider {
+    config: PluginOptions | null;
+    init(config: PluginOptions): void;
+    createUserSession<T extends UserData>(req: FastifyRequest, reply: FastifyReply, userData: T): Promise<void>;
+    destroyUserSession(req: FastifyRequest, reply: FastifyReply): Promise<void>;
+    getUserFromSession<T extends UserData = UserData>(req: FastifyRequest): Promise<T | null>;
+    isSessionValid(req: FastifyRequest): Promise<boolean>;
+    createHybridAuth<T extends UserData>(req: FastifyRequest, reply: FastifyReply, userData: T): Promise<{
+        tokens: TokenPairWithExpiry;
+        session: boolean;
+    }>;
+}
+declare const sessionProvider: SessionProvider;
+export { provider, apiKeyProvider, sessionProvider };
 export declare const JWTTokenAuthCheckHandler: (token: string) => Promise<unknown>;
 declare const forbiddenResponse: import("@sinclair/typebox").TObject<{
     error: import("@sinclair/typebox").TString;
@@ -66,11 +97,31 @@ type ForbiddenResponses = {
 };
 export declare function getAccessToken(req: FastifyRequest): string | undefined;
 export declare function JWTGuard(options?: JWTGuardOptions<any>): GuardFn<ForbiddenResponses, unknown>;
-export declare function useSession<T>(req: FastifyRequest): T | undefined;
+export declare function useSession<T extends UserData = UserData>(req: FastifyRequest): T | undefined;
+export declare function SessionGuard(options?: JWTGuardOptions<any>): GuardFn<ForbiddenResponses, unknown>;
 export declare function APIKeyGuard(options?: JWTGuardOptions<any>): GuardFn<ForbiddenResponses, unknown>;
 export declare function isBearerValid<T>(req: FastifyRequest): Promise<false | T>;
 export declare function isApiKeyValid(req: FastifyRequest): Promise<false | unknown>;
 export declare function isRefreshTokenValid<T>(req: FastifyRequest): Promise<false | T>;
 export declare function validateTokenPair<T>(accessToken: string, refreshToken: string, validateFn?: ValidateTokenPairFunction<T>): Promise<T | null>;
 export declare function refreshAccessToken<T>(accessToken: string, refreshToken: string, validateFn?: ValidateTokenPairFunction<T>): Promise<TokenPairWithExpiry | null>;
+export declare function useUser<T extends UserData = UserData>(req: FastifyRequest): Promise<T | null>;
+export declare function createUserSession<T extends UserData>(req: FastifyRequest, reply: FastifyReply, userData: T): Promise<void>;
+export declare function destroyUserSession(req: FastifyRequest, reply: FastifyReply): Promise<void>;
+export declare function isSessionValid(req: FastifyRequest): Promise<boolean>;
+export declare function createHybridAuth<T extends UserData>(req: FastifyRequest, reply: FastifyReply, userData: T): Promise<{
+    tokens: TokenPairWithExpiry;
+    session: boolean;
+}>;
+export declare function logout(req: FastifyRequest, reply: FastifyReply): Promise<void>;
+export type HybridAuthGuardOptions<TGuards extends Record<string, ValidateSessionFunction<any>>> = {
+    mode?: AuthMode;
+    fallbackMode?: 'jwt-to-session' | 'session-to-jwt';
+    guardName?: keyof TGuards;
+    validateSession?: ValidateSessionFunction<Record<string, any>>;
+    errorMessage?: string;
+    guardDescription?: string;
+    optional?: boolean;
+};
+export declare function HybridAuthGuard<TGuards extends Record<string, ValidateSessionFunction<any>>>(options?: HybridAuthGuardOptions<TGuards>): GuardFn<ForbiddenResponses, unknown>;
 //# sourceMappingURL=jwt-auth.d.ts.map
