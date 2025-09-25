@@ -14,7 +14,7 @@ declare module 'fastify' {
     }
 }
 export interface UserData {
-    userId: string;
+    id: string;
     [key: string]: any;
 }
 export type ValidateSessionFunction<T> = (session: T) => Promise<boolean | string> | (boolean | string);

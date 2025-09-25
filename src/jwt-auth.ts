@@ -22,7 +22,7 @@ declare module 'fastify' {
 
 // User data types
 export interface UserData {
-    userId: string;
+    id: string;
     [key: string]: any;
 }
 
@@ -319,11 +319,11 @@ const sessionProvider: SessionProvider = new SessionProvider();
 function destroySessionAsync(session: any): Promise<void> {
     return new Promise((resolve, reject) => {
         if (session.destroy) {
-        session.destroy((err?: Error) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve();
+            session.destroy((err?: Error) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
                 }
             });
         } else {
