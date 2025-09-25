@@ -622,9 +622,6 @@ export function HybridAuthGuard(options) {
     return async (req, reply) => {
         try {
             const mode = options?.mode || provider.config?.authMode || 'hybrid';
-            console.log('🔍 HybridAuthGuard debugging:');
-            console.log('  - mode:', mode);
-            console.log('  - provider.config?.authMode:', provider.config?.authMode);
             let jwtUser = null;
             let sessionUser = null;
             let jwtValid = false;
