@@ -78,6 +78,34 @@
                 "type": "input",
                 "message": "Enter a secret key"
             }
+        },
+        {
+            "name": "SESSION_SECRET",
+            "type": "string",
+            "default": "session-secret",
+            "configurable": true,
+            "description": "The secret key used for signing up new session users",
+            "inquirer": {
+                "type": "input",
+                "message": "Enter a session secret key"
+            }
+        },
+        {
+            "name": "AUTH_MODE",
+            "type": "string",
+            "default": "jwt-only",
+            "configurable": true,
+            "description": "The authentication mode",
+            "inquirer": {
+                "type": "input",
+                "message": "Enter the authentication mode:",
+                "choices": [
+                    "jwt-only",
+                    "session-only",
+                    "hybrid",
+                    "require-both"
+                ]
+            }
         }
     ],
     "prisma": {
