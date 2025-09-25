@@ -267,12 +267,13 @@ export class SessionProvider {
             throw new Error('Session is not available. Make sure @fastify/session is registered.');
         }
 
+        // Regenerate session ID for security first
+        await req.session.regenerate();
+
+        // Now set the session data after regeneration
         req.session.user = userData;
         req.session.isAuthenticated = true;
         req.session.createdAt = new Date().toISOString();
-
-        // Regenerate session ID for security
-        await req.session.regenerate();
     }
 
     async destroyUserSession(req: FastifyRequest, reply: FastifyReply): Promise<void> {
@@ -773,8 +774,10 @@ export function HybridAuthGuard<TGuards extends Record<string, ValidateSessionFu
 ): GuardFn<ForbiddenResponses, unknown> {
     return async (req: FastifyRequest, reply: FastifyReply) => {
         try {
-            const mode = options?.mode || provider.config?.authMode || 'jwt-only';
-            const fallbackMode = options?.fallbackMode || provider.config?.fallbackMode || 'jwt-to-session';
+            const mode = options?.mode || provider.config?.authMode || 'hybrid';
+            console.log('🔍 HybridAuthGuard debugging:');
+            console.log('  - mode:', mode);
+            console.log('  - provider.config?.authMode:', provider.config?.authMode);
 
             let jwtUser: UserData | null = null;
             let sessionUser: UserData | null = null;

@@ -79,7 +79,7 @@ class App {
             await ctx.fastify.register(sessionPlugin.default, {
                 secret: session.secret,
                 cookieName: session.cookieName,
-                cookie: session.cookieOptions
+                cookie: session.cookieOptions,
             });
             console.log('✅ Session support initialized successfully');
         }
