@@ -775,10 +775,6 @@ export function HybridAuthGuard<TGuards extends Record<string, ValidateSessionFu
     return async (req: FastifyRequest, reply: FastifyReply) => {
         try {
             const mode = options?.mode || provider.config?.authMode || 'hybrid';
-            console.log('🔍 HybridAuthGuard debugging:');
-            console.log('  - mode:', mode);
-            console.log('  - provider.config?.authMode:', provider.config?.authMode);
-
             let jwtUser: UserData | null = null;
             let sessionUser: UserData | null = null;
             let jwtValid = false;
