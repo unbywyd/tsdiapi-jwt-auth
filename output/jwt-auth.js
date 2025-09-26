@@ -690,6 +690,16 @@ export function HybridAuthGuard(options) {
                         else {
                             req.user = jwtUser;
                         }
+                        // Если JWT валиден, но сессии нет или она невалидна - воссоздаем сессию
+                        if (jwtValid && !sessionValid && req.session) {
+                            try {
+                                await sessionProvider.createUserSession(req, reply, jwtUser);
+                            }
+                            catch (error) {
+                                // Если не удалось создать сессию, продолжаем с JWT
+                                console.warn('Failed to recreate session from JWT:', error);
+                            }
+                        }
                     }
                     else if (sessionValid) {
                         // Store session user data
