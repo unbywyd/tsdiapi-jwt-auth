@@ -12,7 +12,7 @@ import {{className}}Service, {
   Output{{pascalCase userModelName}}SchemaLiteWithoutPassword,
   OutputAdminSchemaLiteWithoutPassword
 } from "./{{kebabCase name}}.service.js";
-import { JWTGuard } from "@tsdiapi/jwt-auth";
+import { HybridAuthGuard, useSession } from "@tsdiapi/jwt-auth";
 
 export default function controllers({ useRoute }: AppContext) {
   const service = Container.get({{className}}Service);
@@ -44,10 +44,10 @@ export default function controllers({ useRoute }: AppContext) {
     .summary("Get Current {{pascalCase userModelName}}")
     .codes(buildExtraResponseCodes(Output{{pascalCase userModelName}}SchemaLiteWithoutPassword))
     .auth('bearer')
-    .guard(JWTGuard())
+    .guard(HybridAuthGuard())
     .description("Get information about the currently authenticated user")
     .handler(async (req) => {
-      const session = req.session;
+      const session = useSession<AuthSession>(req);
       const result = await service.getCurrent{{pascalCase userModelName}}(session as AuthSession);
       return response200(result);
     })
@@ -91,11 +91,12 @@ export default function controllers({ useRoute }: AppContext) {
     .summary("Admin Me")
     .auth("bearer")
     .codes(buildExtraResponseCodes(OutputAdminSchemaLiteWithoutPassword))
-    .guard(JWTGuard({
+    .guard(HybridAuthGuard({
       guardName: "admin"
     }))
     .handler(async (req) => {
-      const result = await service.getCurrentAdmin(req.session as AuthSession);
+      const session = useSession<AuthSession>(req);
+      const result = await service.getCurrentAdmin(session as AuthSession);
       return response200(result);
     })
     .build();
