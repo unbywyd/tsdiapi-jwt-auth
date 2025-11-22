@@ -1,5 +1,6 @@
 import { jwtVerify, SignJWT } from 'jose';
 import { Type } from '@sinclair/typebox';
+import { addSchema } from '@tsdiapi/server';
 import { randomUUID } from 'crypto';
 export class JWTAuthProvider {
     config;
@@ -181,7 +182,6 @@ export class SessionProvider {
         // Now set the session data after regeneration
         req.session.user = userData;
         req.session.isAuthenticated = true;
-        req.session.createdAt = new Date().toISOString();
     }
     async destroyUserSession(req, reply) {
         if (!req.session) {
@@ -242,9 +242,11 @@ export const JWTTokenAuthCheckHandler = async (token) => {
         return new Error('Token is invalid!');
     }
 };
-const forbiddenResponse = Type.Object({
+const forbiddenResponse = addSchema(Type.Object({
     error: Type.String(),
-});
+}, {
+    $id: 'ForbiddenResponse'
+}));
 export function getAccessToken(req) {
     const authHeader = req.headers.authorization;
     if (!authHeader) {

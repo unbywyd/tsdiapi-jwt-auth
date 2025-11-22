@@ -2,7 +2,7 @@ import { JWTPayload, jwtVerify, SignJWT } from 'jose'
 import { PluginOptions, AuthMode } from './index.js';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { Type } from '@sinclair/typebox';
-import { GuardFn, ResponseUnion } from '@tsdiapi/server';
+import { GuardFn, ResponseUnion, addSchema } from '@tsdiapi/server';
 import { randomUUID } from 'crypto';
 
 // Extend FastifyRequest interface
@@ -273,7 +273,6 @@ export class SessionProvider {
         // Now set the session data after regeneration
         req.session.user = userData;
         req.session.isAuthenticated = true;
-        req.session.createdAt = new Date().toISOString();
     }
 
     async destroyUserSession(req: FastifyRequest, reply: FastifyReply): Promise<void> {
@@ -348,9 +347,13 @@ export const JWTTokenAuthCheckHandler = async (
     }
 }
 
-const forbiddenResponse = Type.Object({
-    error: Type.String(),
-});
+const forbiddenResponse = addSchema(
+    Type.Object({
+        error: Type.String(),
+    }, {
+        $id: 'ForbiddenResponse'
+    })
+);
 type ForbiddenResponses = {
     403: typeof forbiddenResponse;
 };

@@ -3,7 +3,7 @@ import { useEmailProvider } from '@tsdiapi/email';
 import { useJWTAuthProvider, isBearerValid } from '@tsdiapi/jwt-auth';
 import { CryptoService } from '@tsdiapi/crypto';
 import { Service } from "typedi";
-import { getContext, ResponseBadRequest, ResponseError} from '@tsdiapi/server';
+import { getContext, ResponseBadRequest, ResponseError, addSchema} from '@tsdiapi/server';
 import { useInforuProvider } from '@tsdiapi/inforu';
 import { Type, Static } from '@sinclair/typebox';
 import { Admin, PrismaClient, Session } from '@generated/prisma/index.js';
@@ -13,58 +13,86 @@ import { OutputAdminSchemaLite, OutputAdminSchemaType, Output{{pascalCase userMo
 export const Output{{pascalCase userModelName}}SchemaLiteWithoutPassword = Type.Omit(Output{{pascalCase userModelName}}SchemaLite, ["password"]);
 export const OutputAdminSchemaLiteWithoutPassword = Type.Omit(OutputAdminSchemaLite, ["password"]);
 
-export const InputAdminSignUpSchema = Type.Object({
-  email: Type.String({ format: 'email' }),
-  phoneNumber: Type.Optional(Type.String()),
-  name: Type.String(),
-  secret: Type.String(),
-  password: Type.String({ minLength: 6 })
-});
+export const InputAdminSignUpSchema = addSchema(
+  Type.Object({
+    email: Type.String({ format: 'email' }),
+    phoneNumber: Type.Optional(Type.String()),
+    name: Type.String(),
+    secret: Type.String(),
+    password: Type.String({ minLength: 6 })
+  }, {
+    $id: 'InputAdminSignUpSchema'
+  })
+);
 export type InputAdminSignUpSchemaType = Static<typeof InputAdminSignUpSchema>;
 
-export const InputAdminSignInSchema = Type.Object({
-  phoneNumber: Type.Optional(Type.String()),
-  email: Type.Optional(Type.String()),
-  password: Type.Optional(Type.String({ minLength: 6 }))
-});
+export const InputAdminSignInSchema = addSchema(
+  Type.Object({
+    phoneNumber: Type.Optional(Type.String()),
+    email: Type.Optional(Type.String()),
+    password: Type.Optional(Type.String({ minLength: 6 }))
+  }, {
+    $id: 'InputAdminSignInSchema'
+  })
+);
 export type InputAdminSignInSchemaType = Static<typeof InputAdminSignInSchema>;
 
-export const OutputAdminAuthSchema = Type.Object({
-  session: Type.Optional(Type.Object({
-    accessToken: Type.String(),
-    admin: OutputAdminSchemaLiteWithoutPassword
-  })),
-  otp: Type.Optional(Type.Object({
-    sessionId: Type.String()
-  }))
-});
+export const OutputAdminAuthSchema = addSchema(
+  Type.Object({
+    session: Type.Optional(Type.Object({
+      accessToken: Type.String(),
+      admin: OutputAdminSchemaLiteWithoutPassword
+    })),
+    otp: Type.Optional(Type.Object({
+      sessionId: Type.String()
+    }))
+  }, {
+    $id: 'OutputAdminAuthSchema'
+  })
+);
 export type OutputAdminAuthSchemaType = Static<typeof OutputAdminAuthSchema>;
 
-export const Input{{pascalCase userModelName}}SignInSchema = Type.Object({
-  email: Type.Optional(Type.String({ format: 'email' })),
-  phoneNumber: Type.Optional(Type.String()),
-});
+export const Input{{pascalCase userModelName}}SignInSchema = addSchema(
+  Type.Object({
+    email: Type.Optional(Type.String({ format: 'email' })),
+    phoneNumber: Type.Optional(Type.String()),
+  }, {
+    $id: 'Input{{pascalCase userModelName}}SignInSchema'
+  })
+);
 export type Input{{pascalCase userModelName}}SignInSchemaType = Static<typeof Input{{pascalCase userModelName}}SignInSchema>;
 
-export const Output{{pascalCase userModelName}}SignInSchema = Type.Object({
-  email: Type.Optional(Type.String({ format: 'email' })),
-  phoneNumber: Type.Optional(Type.String()),
-  sessionId: Type.String()
-});
+export const Output{{pascalCase userModelName}}SignInSchema = addSchema(
+  Type.Object({
+    email: Type.Optional(Type.String({ format: 'email' })),
+    phoneNumber: Type.Optional(Type.String()),
+    sessionId: Type.String()
+  }, {
+    $id: 'Output{{pascalCase userModelName}}SignInSchema'
+  })
+);
 export type Output{{pascalCase userModelName}}SignInSchemaType = Static<typeof Output{{pascalCase userModelName}}SignInSchema>;
 
-export const InputOtpVerifySchema = Type.Object({
-  code: Type.String(),
-  sessionId: Type.String()
-});
+export const InputOtpVerifySchema = addSchema(
+  Type.Object({
+    code: Type.String(),
+    sessionId: Type.String()
+  }, {
+    $id: 'InputOtpVerifySchema'
+  })
+);
 export type InputOtpVerifySchemaType = Static<typeof InputOtpVerifySchema>;
 
-export const Output{{pascalCase userModelName}}AuthSchema = Type.Object({
-  session: Type.Object({
-    accessToken: Type.String(),
-    user: Output{{pascalCase userModelName}}SchemaLiteWithoutPassword
+export const Output{{pascalCase userModelName}}AuthSchema = addSchema(
+  Type.Object({
+    session: Type.Object({
+      accessToken: Type.String(),
+      user: Output{{pascalCase userModelName}}SchemaLiteWithoutPassword
+    })
+  }, {
+    $id: 'Output{{pascalCase userModelName}}AuthSchema'
   })
-});
+);
 export type Output{{pascalCase userModelName}}AuthSchemaType = Static<typeof Output{{pascalCase userModelName}}AuthSchema>;
 
 export type AuthSession = {

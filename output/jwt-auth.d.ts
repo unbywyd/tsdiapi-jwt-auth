@@ -90,7 +90,9 @@ export { provider, apiKeyProvider, sessionProvider };
 export declare const JWTTokenAuthCheckHandler: (token: string) => Promise<unknown>;
 declare const forbiddenResponse: import("@sinclair/typebox").TObject<{
     error: import("@sinclair/typebox").TString;
-}>;
+}> & {
+    $id: string;
+};
 type ForbiddenResponses = {
     403: typeof forbiddenResponse;
 };

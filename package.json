@@ -1,7 +1,7 @@
 {
   "name": "@tsdiapi/jwt-auth",
   "description": "JWT authentication plugin for TSDIAPI-Server, providing easy-to-use guards, token generation, and session validation.",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "type": "module",
   "keywords": [
     "tsdiapi",
@@ -39,7 +39,7 @@
     "@fastify/cookie": "^11.0.2",
     "@fastify/session": "^11.1.0",
     "@sinclair/typebox": "^0.34.41",
-    "@tsdiapi/server": "^0.4.0",
+    "@tsdiapi/server": "^0.4.1",
     "fastify": "^5.6.2",
     "typedi": "^0.10.0"
   },
