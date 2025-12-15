@@ -9,6 +9,9 @@
 
 - **Token Management**: Generate and verify JWT tokens with customizable payloads and expiration times.
 - **Session Protection**: Use built-in or custom session validation logic for secure API access.
+- **Cookie-based Sessions**: Support for cookie-based session authentication using @fastify/session and @fastify/cookie.
+- **Hybrid Authentication**: Combine JWT and session authentication with flexible fallback strategies.
+- **Multiple Authentication Modes**: Choose between JWT-only, session-only, hybrid, or require-both authentication.
 - **Custom Guards**: Easily register and reference multiple guards to support various security requirements.
 - **Environment Integration**: Supports configuration through `.env` files to streamline deployment.
 - **Optional Guards**: Load session without blocking requests when authentication fails.
@@ -53,11 +56,39 @@ createApp({
           validate: () => true
         }
       },
-
+      // Authentication mode: 'jwt-only', 'session-only', 'hybrid', 'require-both'
+      authMode: 'jwt-only', // Default mode, override with AUTH_MODE in .env
+      // Session configuration (required for session-based authentication)
+      session: {
+        store: 'memory', // Session store type: 'memory', 'redis', 'mongodb', 'custom'
+        secret: 'session-secret-key', // Use SESSION_SECRET in .env as an alternative
+        cookieName: 'sessionId',
+        cookieOptions: {
+          secure: false, // Set to true in production with HTTPS
+          httpOnly: true,
+          sameSite: 'lax',
+          maxAge: 60 * 60 * 24 * 7 * 1000, // 7 days in milliseconds
+          path: '/'
+        }
+      }
     }),
   ],
 });
 ```
+
+### Authentication Modes
+
+The plugin supports four authentication modes that can be configured via the `authMode` option:
+
+1. **`jwt-only`** (default) - Only JWT Bearer token authentication
+2. **`session-only`** - Only cookie-based session authentication
+3. **`hybrid`** - Accepts either JWT or session authentication (whichever is available)
+4. **`require-both`** - Requires both JWT and session authentication to be valid
+
+**Note:** To use session-based authentication (`session-only`, `hybrid`, or `require-both`), you must:
+1. Install session dependencies: `npm install @fastify/cookie @fastify/session`
+2. Configure the `session` option in plugin configuration
+3. Set a `SESSION_SECRET` environment variable or provide `session.secret` in config
 
 ### Environment Configuration
 
@@ -68,6 +99,8 @@ JWT_SECRET_KEY=your-secret-key
 JWT_EXPIRATION_TIME=604800
 JWT_REFRESH_SECRET_KEY=your-refresh-secret-key
 JWT_REFRESH_EXPIRATION_TIME=2592000
+SESSION_SECRET=your-session-secret-key
+AUTH_MODE=jwt-only
 ```
 
 ## Protecting Endpoints
@@ -149,6 +182,103 @@ useRoute()
     return {
       status: 200,
       data: { message: 'API access granted' }
+    }
+  })
+  .build();
+```
+
+#### Applying the `SessionGuard`
+
+**Note:** Session guard requires `@fastify/session` and `@fastify/cookie` to be installed.
+
+```typescript
+import { SessionGuard, useSession } from "@tsdiapi/jwt-auth";
+
+useRoute()
+  .get('/dashboard')
+  .code(200, Type.Object({
+      message: Type.String(),
+      userId: Type.String(),
+  }))
+  .code(403, Type.Object({
+      error: Type.String(),
+  }))
+  .guard(SessionGuard())
+  .handler(async (req) => {
+    const session = useSession(req);
+    return {
+      status: 200,
+      data: {
+        message: 'Welcome to dashboard',
+        userId: session.userId
+      }
+    }
+  })
+  .build();
+```
+
+#### Applying the `HybridAuthGuard`
+
+The `HybridAuthGuard` allows flexible authentication using different modes:
+
+```typescript
+import { HybridAuthGuard, useSession } from "@tsdiapi/jwt-auth";
+
+// Example 1: Hybrid mode - accepts either JWT or session
+useRoute()
+  .get('/profile')
+  .code(200, Type.Object({
+      message: Type.String(),
+      userId: Type.String(),
+  }))
+  .code(403, Type.Object({
+      error: Type.String(),
+  }))
+  .guard(HybridAuthGuard({ mode: 'hybrid' }))
+  .handler(async (req) => {
+    const session = useSession(req);
+    return {
+      status: 200,
+      data: {
+        message: 'User profile',
+        userId: session.userId
+      }
+    }
+  })
+  .build();
+
+// Example 2: Require both JWT and session
+useRoute()
+  .get('/secure-data')
+  .code(200, Type.Object({
+      data: Type.String(),
+  }))
+  .code(403, Type.Object({
+      error: Type.String(),
+  }))
+  .guard(HybridAuthGuard({ mode: 'require-both' }))
+  .handler(async (req) => {
+    return {
+      status: 200,
+      data: { data: 'Top secret information' }
+    }
+  })
+  .build();
+
+// Example 3: Session-only mode
+useRoute()
+  .get('/session-protected')
+  .code(200, Type.Object({
+      message: Type.String(),
+  }))
+  .code(403, Type.Object({
+      error: Type.String(),
+  }))
+  .guard(HybridAuthGuard({ mode: 'session-only' }))
+  .handler(async (req) => {
+    return {
+      status: 200,
+      data: { message: 'Session authenticated' }
     }
   })
   .build();
@@ -532,6 +662,167 @@ const isValidCustom = await authProvider.validateTokens(
 
 ---
 
+## Using the Session Provider
+
+The `SessionProvider` is a service for handling cookie-based session authentication. It provides methods for creating, destroying, and managing user sessions.
+
+**Note:** Session provider requires `@fastify/session` and `@fastify/cookie` to be installed.
+
+### Importing the Provider
+
+```typescript
+import { useSessionProvider, createUserSession, destroyUserSession, isSessionValid, createHybridAuth } from "@tsdiapi/jwt-auth";
+```
+
+### `createUserSession<T>(req, reply, userData: T): Promise<void>`
+
+Creates a new session for a user with the provided user data.
+
+#### Example:
+```typescript
+import { createUserSession } from "@tsdiapi/jwt-auth";
+
+useRoute()
+  .post('/login')
+  .code(200, Type.Object({
+    message: Type.String(),
+  }))
+  .handler(async (req, reply) => {
+    // Validate user credentials here
+    const userData = {
+      userId: "123",
+      role: "user",
+      email: "user@example.com"
+    };
+
+    await createUserSession(req, reply, userData);
+
+    return {
+      status: 200,
+      data: { message: 'Logged in successfully' }
+    };
+  })
+  .build();
+```
+
+### `destroyUserSession(req, reply): Promise<void>`
+
+Destroys the current user session (logout).
+
+#### Example:
+```typescript
+import { destroyUserSession } from "@tsdiapi/jwt-auth";
+
+useRoute()
+  .post('/logout')
+  .code(200, Type.Object({
+    message: Type.String(),
+  }))
+  .handler(async (req, reply) => {
+    await destroyUserSession(req, reply);
+
+    return {
+      status: 200,
+      data: { message: 'Logged out successfully' }
+    };
+  })
+  .build();
+```
+
+### `isSessionValid(req): Promise<boolean>`
+
+Checks if the current session is valid.
+
+#### Example:
+```typescript
+import { isSessionValid } from "@tsdiapi/jwt-auth";
+
+useRoute()
+  .get('/check-session')
+  .code(200, Type.Object({
+    isValid: Type.Boolean(),
+  }))
+  .handler(async (req) => {
+    const valid = await isSessionValid(req);
+
+    return {
+      status: 200,
+      data: { isValid: valid }
+    };
+  })
+  .build();
+```
+
+### `createHybridAuth<T>(req, reply, userData: T): Promise<{ tokens: TokenPairWithExpiry; session: boolean }>`
+
+Creates both JWT tokens and a session for hybrid authentication.
+
+#### Example:
+```typescript
+import { createHybridAuth } from "@tsdiapi/jwt-auth";
+
+useRoute()
+  .post('/login-hybrid')
+  .code(200, Type.Object({
+    message: Type.String(),
+    accessToken: Type.String(),
+    refreshToken: Type.String(),
+    accessTokenExpiresAt: Type.String(),
+    refreshTokenExpiresAt: Type.String(),
+  }))
+  .handler(async (req, reply) => {
+    // Validate user credentials here
+    const userData = {
+      userId: "123",
+      role: "user",
+      email: "user@example.com"
+    };
+
+    const result = await createHybridAuth(req, reply, userData);
+
+    return {
+      status: 200,
+      data: {
+        message: 'Logged in successfully',
+        accessToken: result.tokens.accessToken,
+        refreshToken: result.tokens.refreshToken,
+        accessTokenExpiresAt: result.tokens.accessTokenExpiresAt.toISOString(),
+        refreshTokenExpiresAt: result.tokens.refreshTokenExpiresAt.toISOString()
+      }
+    };
+  })
+  .build();
+```
+
+### `useUser<T>(req): Promise<T | null>`
+
+Universal function to get user data from any authentication method (session, JWT, or session provider).
+
+#### Example:
+```typescript
+import { useUser } from "@tsdiapi/jwt-auth";
+
+useRoute()
+  .get('/current-user')
+  .code(200, Type.Object({
+    user: Type.Optional(Type.Object({
+      userId: Type.String(),
+      role: Type.String(),
+    })),
+  }))
+  .handler(async (req) => {
+    const user = await useUser(req);
+
+    return {
+      status: 200,
+      data: { user }
+    };
+  })
+  .build();
+```
+
+---
+
 ## Configuration
 
 ### Environment Variables
@@ -540,6 +831,8 @@ const isValidCustom = await authProvider.validateTokens(
 - `JWT_EXPIRATION_TIME` - Token expiration time in seconds (default: 604800 - 7 days)
 - `JWT_REFRESH_SECRET_KEY` - Secret key for JWT refresh token signing (default: 'refresh-secret-key-for-jwt')
 - `JWT_REFRESH_EXPIRATION_TIME` - Refresh token expiration time in seconds (default: 2592000 - 30 days)
+- `SESSION_SECRET` - Secret key for session cookie signing (default: 'session-secret-key')
+- `AUTH_MODE` - Authentication mode: 'jwt-only', 'session-only', 'hybrid', 'require-both' (default: 'jwt-only')
 
 ### Plugin Options
 
@@ -551,6 +844,8 @@ const isValidCustom = await authProvider.validateTokens(
 | `refreshExpirationTime` | `number`                               | Refresh token expiration time in seconds.      |
 | `guards`              | `Record<string, ValidateSessionFunction>` | Custom guards for validating sessions.         |
 | `apiKeys`             | `Record<string, APIKeyEntry \| 'JWT' \| true>` | API keys configuration.                        |
+| `authMode`            | `AuthMode`                                | Authentication mode: 'jwt-only', 'session-only', 'hybrid', 'require-both'. |
+| `session`             | `SessionConfig`                           | Session configuration (store, secret, cookie options). |
 
 
 ---
@@ -559,28 +854,49 @@ const isValidCustom = await authProvider.validateTokens(
 
 ### Guards
 
-- `JWTGuard(options?)` - JWT authentication (use `optional: true` for optional mode)
+- `JWTGuard(options?)` - JWT Bearer token authentication (use `optional: true` for optional mode)
 - `APIKeyGuard(options?)` - API key authentication (use `optional: true` for optional mode)
+- `SessionGuard(options?)` - Cookie-based session authentication (use `optional: true` for optional mode)
+- `HybridAuthGuard(options?)` - Flexible authentication supporting multiple modes
 
 ### Helper Functions
 
-- `useSession<T>(req)` - Get current session
+#### Session Management
+- `useSession<T>(req)` - Get current session from any authentication method
+- `useUser<T>(req)` - Universal function to get user data from any authentication method
+- `createUserSession<T>(req, reply, userData)` - Create a new session for a user
+- `destroyUserSession(req, reply)` - Destroy the current user session (logout)
+- `isSessionValid(req)` - Check if the current session is valid
+- `createHybridAuth<T>(req, reply, userData)` - Create both JWT tokens and a session
+
+#### Provider Functions
 - `useJWTAuthProvider()` - Get JWT provider instance
 - `useApiKeyProvider()` - Get API key provider instance
+- `useSessionProvider()` - Get Session provider instance
+
+#### Token Validation
 - `isBearerValid<T>(req)` - Check if Bearer token is valid
 - `isApiKeyValid(req)` - Check if API key is valid
 - `isRefreshTokenValid<T>(req)` - Check if refresh token is valid
 - `validateTokenPair<T>(accessToken, refreshToken, validateFn?)` - Validate if both tokens are valid and belong to the same user
 - `refreshAccessToken<T>(accessToken, refreshToken, validateFn?)` - Generate new access and refresh tokens with expiry dates from refresh token with validation
 
+#### Other
+- `logout(req, reply)` - JWT logout function
+
 ### Types
 
 - `ValidateSessionFunction<T>` - Session validation function type
 - `JWTGuardOptions<TGuards>` - Guard configuration options
+- `HybridAuthGuardOptions<TGuards>` - Hybrid guard configuration options
 - `PluginOptions<TGuards>` - Plugin configuration options
 - `TokenPair` - Object containing access and refresh tokens
 - `TokenWithExpiry` - Object containing token and expiration date
 - `TokenPairWithExpiry` - Object containing access and refresh tokens with expiration dates
+- `AuthMode` - Authentication mode type: 'jwt-only', 'session-only', 'hybrid', 'require-both'
+- `SessionConfig` - Session configuration type
+- `SessionStore` - Session store type: 'memory', 'redis', 'mongodb', 'custom'
+- `UserData` - User data interface
 
 ---
 
